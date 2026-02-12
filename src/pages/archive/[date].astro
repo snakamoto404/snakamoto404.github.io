@@ -25,7 +25,7 @@ const toIsoDate = (value: Date) => value.toISOString().slice(0, 10);
 const isoDate = toIsoDate(entry.data.date);
 ---
 
-<BaseLayout title={`${isoDate} | Archive`} description={entry.data.summary}>
+<BaseLayout title={`${isoDate} | Past content`} description={entry.data.summary}>
   <article class="card">
     <p><a href="/archive/">Back to past content</a></p>
     <h1>{entry.data.title}</h1>
