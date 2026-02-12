@@ -1,0 +1,103 @@
+:root {
+  --bg: #f8f9fb;
+  --surface: #ffffff;
+  --text: #14171a;
+  --muted: #5b6470;
+  --border: #d9dee5;
+  --link: #1244a5;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  font-family: "Atkinson Hyperlegible", "Segoe UI", sans-serif;
+  color: var(--text);
+  background: linear-gradient(180deg, #fcfdff 0%, #f1f5fb 100%);
+}
+
+a {
+  color: var(--link);
+}
+
+.container {
+  width: min(900px, 92vw);
+  margin: 0 auto;
+}
+
+.site-header {
+  border-bottom: 1px solid var(--border);
+  background: var(--surface);
+}
+
+.site-header .container {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 1rem;
+  padding: 1rem 0;
+}
+
+.site-nav {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.75rem;
+}
+
+.site-main {
+  padding: 2rem 0 4rem;
+}
+
+.card {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 0.75rem;
+  padding: 1.25rem;
+}
+
+.list-reset {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+}
+
+.list-item + .list-item {
+  margin-top: 0.75rem;
+}
+
+form {
+  display: grid;
+  gap: 0.75rem;
+  max-width: 30rem;
+}
+
+label {
+  font-weight: 600;
+}
+
+input[type="email"] {
+  border: 1px solid var(--border);
+  border-radius: 0.5rem;
+  padding: 0.6rem 0.75rem;
+  font: inherit;
+}
+
+button {
+  width: fit-content;
+  border: 1px solid #0f2d6e;
+  border-radius: 0.5rem;
+  background: #0f2d6e;
+  color: #fff;
+  padding: 0.6rem 1rem;
+  font: inherit;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.site-footer {
+  border-top: 1px solid var(--border);
+  color: var(--muted);
+  padding: 1.5rem 0 2rem;
+}

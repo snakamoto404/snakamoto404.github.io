@@ -1,0 +1,42 @@
+---
+const repo = import.meta.env.PUBLIC_GISCUS_REPO ?? '';
+const repoId = import.meta.env.PUBLIC_GISCUS_REPO_ID ?? '';
+const category = import.meta.env.PUBLIC_GISCUS_CATEGORY ?? '';
+const categoryId = import.meta.env.PUBLIC_GISCUS_CATEGORY_ID ?? '';
+const mapping = import.meta.env.PUBLIC_GISCUS_MAPPING ?? 'pathname';
+const reactionsEnabled = import.meta.env.PUBLIC_GISCUS_REACTIONS_ENABLED ?? '1';
+const emitMetadata = import.meta.env.PUBLIC_GISCUS_EMIT_METADATA ?? '0';
+const theme = import.meta.env.PUBLIC_GISCUS_THEME ?? 'preferred_color_scheme';
+const lang = import.meta.env.PUBLIC_GISCUS_LANG ?? 'en';
+
+const isConfigured = Boolean(repo && repoId && category && categoryId);
+---
+
+<section aria-label="Comments" class="card" style="margin-top: 2rem;">
+  <h2>Comments</h2>
+  {
+    isConfigured ? (
+      <script
+        src="https://giscus.app/client.js"
+        data-repo={repo}
+        data-repo-id={repoId}
+        data-category={category}
+        data-category-id={categoryId}
+        data-mapping={mapping}
+        data-strict="0"
+        data-reactions-enabled={reactionsEnabled}
+        data-emit-metadata={emitMetadata}
+        data-input-position="top"
+        data-theme={theme}
+        data-lang={lang}
+        data-loading="lazy"
+        crossorigin="anonymous"
+        async
+      ></script>
+    ) : (
+      <p>
+        Configure Giscus by setting <code>PUBLIC_GISCUS_*</code> environment variables.
+      </p>
+    )
+  }
+</section>

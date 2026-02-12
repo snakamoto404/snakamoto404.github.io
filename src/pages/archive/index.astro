@@ -1,0 +1,24 @@
+---
+import { getCollection } from 'astro:content';
+import BaseLayout from '../../layouts/BaseLayout.astro';
+
+const entries = await getCollection('archive');
+const sortedEntries = [...entries].sort((a, b) => b.data.date.localeCompare(a.data.date));
+---
+
+<BaseLayout title="Archive | snakamoto404.github.io">
+  <h1>Archive</h1>
+  <p>Browse all available daily feed entries.</p>
+  <ul class="list-reset">
+    {
+      sortedEntries.map((entry) => (
+        <li class="list-item card">
+          <a href={`/archive/${entry.data.date}/`}>
+            <strong>{entry.data.date}</strong>
+          </a>
+          <p>{entry.data.summary ?? 'No summary provided.'}</p>
+        </li>
+      ))
+    }
+  </ul>
+</BaseLayout>

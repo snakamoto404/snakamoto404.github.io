@@ -1,0 +1,15 @@
+---
+import BaseLayout from '../layouts/BaseLayout.astro';
+---
+
+<BaseLayout title="Unsubscribe | snakamoto404.github.io">
+  <h1>Unsubscribe</h1>
+  <div class="card">
+    <p>Enter your email to stop receiving daily feed updates.</p>
+    <form action="https://example.com/unsubscribe" method="post">
+      <label for="unsubscribe-email">Email address</label>
+      <input id="unsubscribe-email" name="email" type="email" required autocomplete="email" />
+      <button type="submit">Unsubscribe</button>
+    </form>
+  </div>
+</BaseLayout>

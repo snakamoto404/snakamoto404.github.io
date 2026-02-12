@@ -1,0 +1,15 @@
+---
+import BaseLayout from '../layouts/BaseLayout.astro';
+---
+
+<BaseLayout title="Subscribe | snakamoto404.github.io">
+  <h1>Subscribe</h1>
+  <div class="card">
+    <p>Enter your email to receive daily feed updates.</p>
+    <form action="https://example.com/subscribe" method="post">
+      <label for="subscribe-email">Email address</label>
+      <input id="subscribe-email" name="email" type="email" required autocomplete="email" />
+      <button type="submit">Subscribe</button>
+    </form>
+  </div>
+</BaseLayout>
