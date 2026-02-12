@@ -3,10 +3,12 @@ import BaseLayout from '../layouts/BaseLayout.astro';
 ---
 
 <BaseLayout title="Subscribed | snakamoto404.github.io">
-  <h1>Subscribed</h1>
-  <div class="card">
-    <p>You’re on the list.</p>
-    <p><a href="/archive/">Browse the archive</a></p>
-    <p style="color: var(--muted);">To unsubscribe later: <a href="/unsubscribe/">/unsubscribe</a></p>
-  </div>
+  <section class="space-y-4">
+    <h1 class="text-3xl font-semibold tracking-tight">Subscribed</h1>
+    <div class="panel space-y-2">
+      <p>You are on the list.</p>
+      <p><a href="/archive/" class="font-medium">Browse the archive</a></p>
+      <p class="text-sm text-foreground/70">To unsubscribe later: <a href="/unsubscribe/">/unsubscribe</a></p>
+    </div>
+  </section>
 </BaseLayout>

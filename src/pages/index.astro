@@ -10,39 +10,46 @@ const latest = [...entries]
 ---
 
 <BaseLayout title="Home | snakamoto404.github.io">
-  <h1>Daily Feed Archive</h1>
+  <section class="space-y-6">
+    <div class="space-y-2">
+      <h1 class="text-3xl font-semibold tracking-tight">Daily Feed Archive</h1>
+      <p class="text-sm text-foreground/80">Markdown-backed daily entries with clean, stable permalinks.</p>
+    </div>
 
-  <div class="card">
-    <p>
-      This is a lightweight daily feed archive. Each day has its own markdown-backed page at
-      <code>/archive/YYYY-MM-DD/</code>.
+    <div class="panel space-y-3">
+      <p>
+        This archive publishes each day to <code>/archive/YYYY-MM-DD/</code> with source files in
+        <code>src/content/archive/</code>.
+      </p>
+      <p>
+        Manage email updates at <a href="/subscribe/">/subscribe</a> and <a href="/unsubscribe/">/unsubscribe</a>.
+      </p>
+    </div>
+
+    <section class="space-y-3">
+      <h2 class="text-xl font-semibold tracking-tight">Latest</h2>
+      {
+        latest.length ? (
+          <ul class="space-y-3">
+            {latest.map((entry) => (
+              <li class="panel">
+                <a href={`/archive/${toIsoDate(entry.data.date)}/`} class="text-base font-semibold hover:text-accent">
+                  {toIsoDate(entry.data.date)}
+                </a>
+                <p class="mt-2 text-sm text-foreground/85">{entry.data.summary ?? 'No summary provided.'}</p>
+              </li>
+            ))}
+          </ul>
+        ) : (
+          <div class="panel">
+            <p>No entries yet. Check back soon.</p>
+          </div>
+        )
+      }
+    </section>
+
+    <p class="text-sm">
+      <a href="/archive/" class="font-medium">Browse all entries -></a>
     </p>
-    <p>
-      Subscribe here: <a href="/subscribe/">/subscribe</a> · Unsubscribe: <a href="/unsubscribe/">/unsubscribe</a>.
-    </p>
-  </div>
-
-  <h2 style="margin-top: 2rem;">Latest</h2>
-  {
-    latest.length ? (
-      <ul class="list-reset">
-        {latest.map((entry) => (
-          <li class="list-item card">
-            <a href={`/archive/${toIsoDate(entry.data.date)}/`}>
-              <strong>{toIsoDate(entry.data.date)}</strong>
-            </a>
-            <p>{entry.data.summary ?? 'No summary provided.'}</p>
-          </li>
-        ))}
-      </ul>
-    ) : (
-      <div class="card">
-        <p>No entries yet. Check back soon.</p>
-      </div>
-    )
-  }
-
-  <p style="margin-top: 1rem;">
-    <a href="/archive/">Browse all entries →</a>
-  </p>
+  </section>
 </BaseLayout>

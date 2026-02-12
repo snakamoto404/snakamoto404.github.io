@@ -10,18 +10,29 @@ const sortedEntries = [...entries].sort((a, b) => b.data.date.getTime() - a.data
 ---
 
 <BaseLayout title="Past content | snakamoto404.github.io">
-  <h1>Past content</h1>
-  <p>Browse all available entries.</p>
-  <ul class="list-reset">
+  <section class="space-y-6">
+    <div class="space-y-2">
+      <h1 class="text-3xl font-semibold tracking-tight">Past content</h1>
+      <p class="text-sm text-foreground/80">Browse all available daily entries.</p>
+    </div>
+
     {
-      sortedEntries.map((entry) => (
-        <li class="list-item card">
-          <a href={`/archive/${toIsoDate(entry.data.date)}/`}>
-            <strong>{toIsoDate(entry.data.date)}</strong>
-          </a>
-          <p>{entry.data.summary ?? 'No summary provided.'}</p>
-        </li>
-      ))
+      sortedEntries.length ? (
+        <ul class="space-y-3">
+          {sortedEntries.map((entry) => (
+            <li class="panel">
+              <a href={`/archive/${toIsoDate(entry.data.date)}/`} class="text-base font-semibold hover:text-accent">
+                {toIsoDate(entry.data.date)}
+              </a>
+              <p class="mt-2 text-sm text-foreground/85">{entry.data.summary ?? 'No summary provided.'}</p>
+            </li>
+          ))}
+        </ul>
+      ) : (
+        <div class="panel">
+          <p>No archive entries found.</p>
+        </div>
+      )
     }
-  </ul>
+  </section>
 </BaseLayout>

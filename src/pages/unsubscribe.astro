@@ -6,25 +6,34 @@ const NEXT_URL = 'https://snakamoto404.github.io/unsubscribed/';
 ---
 
 <BaseLayout title="Unsubscribe | snakamoto404.github.io">
-  <h1>Unsubscribe</h1>
-  <div class="card">
-    <p>Enter your email to stop receiving daily feed updates.</p>
+  <section class="space-y-4">
+    <h1 class="text-3xl font-semibold tracking-tight">Unsubscribe</h1>
+    <div class="panel space-y-4">
+      <p>Enter your email to stop receiving daily feed updates.</p>
 
-    <form action={FORMSUBMIT_ENDPOINT} method="POST">
-      <label for="unsubscribe-email">Email address</label>
-      <input id="unsubscribe-email" name="email" type="email" required autocomplete="email" />
+      <form action={FORMSUBMIT_ENDPOINT} method="POST" class="grid max-w-md gap-3">
+        <label for="unsubscribe-email" class="text-sm font-medium">Email address</label>
+        <input
+          id="unsubscribe-email"
+          name="email"
+          type="email"
+          required
+          autocomplete="email"
+          class="rounded-lg border border-border bg-background px-3 py-2"
+        />
 
-      <!-- Action marker -->
-      <input type="hidden" name="action" value="unsubscribe" />
+        <input type="hidden" name="action" value="unsubscribe" />
+        <input type="hidden" name="_subject" value="Research feed: unsubscribe" />
+        <input type="hidden" name="_next" value={NEXT_URL} />
+        <input type="text" name="_honey" style="display:none" tabindex={-1} autocomplete="off" />
 
-      <!-- FormSubmit settings -->
-      <input type="hidden" name="_subject" value="Research feed: unsubscribe" />
-      <input type="hidden" name="_next" value={NEXT_URL} />
-
-      <!-- Anti-spam honeypot (leave blank) -->
-      <input type="text" name="_honey" style="display:none" tabindex={-1} autocomplete="off" />
-
-      <button type="submit">Unsubscribe</button>
-    </form>
-  </div>
+        <button
+          type="submit"
+          class="mt-1 w-fit rounded-lg border border-accent bg-accent px-4 py-2 text-sm font-semibold text-background transition hover:opacity-90"
+        >
+          Unsubscribe
+        </button>
+      </form>
+    </div>
+  </section>
 </BaseLayout>

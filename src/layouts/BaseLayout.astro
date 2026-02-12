@@ -7,6 +7,19 @@ interface Props {
 }
 
 const { title, description = 'Daily feed archive for snakamoto404.github.io' } = Astro.props;
+
+const pathname = Astro.url.pathname;
+const navItems = [
+  { href: '/', label: 'Home' },
+  { href: '/archive/', label: 'Past content' },
+  { href: '/subscribe/', label: 'Subscribe' },
+  { href: '/unsubscribe/', label: 'Unsubscribe' }
+];
+
+const isActivePath = (href: string) => {
+  if (href === '/') return pathname === '/';
+  return pathname.startsWith(href);
+};
 ---
 
 <!doctype html>
@@ -20,21 +33,33 @@ const { title, description = 'Daily feed archive for snakamoto404.github.io' } =
     <title>{title}</title>
   </head>
   <body>
-    <header class="site-header">
-      <div class="container">
-        <a class="brand" href="/">Home</a>
-        <nav class="site-nav" aria-label="Main navigation">
-          <a href="/archive/">Past content</a>
-          <a href="/subscribe/">Subscribe</a>
-          <a href="/unsubscribe/">Unsubscribe</a>
-        </nav>
+    <header class="border-b border-border/80 bg-background/95 backdrop-blur">
+      <div class="app-layout py-5">
+        <div class="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+          <a href="/" class="text-lg font-semibold tracking-tight">snakamoto404</a>
+          <nav aria-label="Main navigation" class="-mx-1 flex flex-wrap items-center gap-x-1 gap-y-2 text-sm">
+            {
+              navItems.map((item) => (
+                <a
+                  href={item.href}
+                  class:list={[
+                    'rounded-md px-2 py-1 transition-colors hover:bg-muted/65',
+                    isActivePath(item.href) && 'active-nav'
+                  ]}
+                >
+                  {item.label}
+                </a>
+              ))
+            }
+          </nav>
+        </div>
       </div>
     </header>
-    <main class="site-main">
-      <div class="container">
+
+    <main class="flex-1">
+      <div class="app-layout py-10">
         <slot />
       </div>
     </main>
-    <footer class="site-footer"></footer>
   </body>
 </html>

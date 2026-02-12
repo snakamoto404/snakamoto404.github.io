@@ -26,13 +26,21 @@ const isoDate = toIsoDate(entry.data.date);
 ---
 
 <BaseLayout title={`${isoDate} | Past content`} description={entry.data.summary}>
-  <article class="card">
-    <p><a href="/archive/">Back to past content</a></p>
-    <h1>{entry.data.title}</h1>
-    <p>
-      <strong>Date:</strong> <time datetime={isoDate}>{isoDate}</time>
+  <article class="panel space-y-5">
+    <p class="text-sm">
+      <a href="/archive/" class="font-medium">Back to past content</a>
     </p>
-    <Content />
+
+    <header class="space-y-2 border-b border-border/80 pb-4">
+      <h1 class="text-2xl font-semibold tracking-tight">{entry.data.title}</h1>
+      <p class="text-sm text-foreground/80">
+        <strong>Date:</strong> <time datetime={isoDate}>{isoDate}</time>
+      </p>
+    </header>
+
+    <div class="app-prose">
+      <Content />
+    </div>
   </article>
 
   <GiscusComments />

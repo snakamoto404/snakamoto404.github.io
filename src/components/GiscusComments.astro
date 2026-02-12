@@ -12,8 +12,8 @@ const lang = import.meta.env.PUBLIC_GISCUS_LANG ?? 'en';
 const isConfigured = Boolean(repo && repoId && category && categoryId);
 ---
 
-<section aria-label="Comments" class="card" style="margin-top: 2rem;">
-  <h2>Comments</h2>
+<section aria-label="Comments" class="panel mt-8 space-y-3">
+  <h2 class="text-xl font-semibold tracking-tight">Comments</h2>
   {
     isConfigured ? (
       <script
@@ -34,7 +34,7 @@ const isConfigured = Boolean(repo && repoId && category && categoryId);
         async
       ></script>
     ) : (
-      <p>
+      <p class="text-sm text-foreground/80">
         Configure Giscus by setting <code>PUBLIC_GISCUS_*</code> environment variables.
       </p>
     )

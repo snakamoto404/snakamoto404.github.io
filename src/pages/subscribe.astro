@@ -6,29 +6,38 @@ const NEXT_URL = 'https://snakamoto404.github.io/subscribed/';
 ---
 
 <BaseLayout title="Subscribe | snakamoto404.github.io">
-  <h1>Subscribe</h1>
-  <div class="card">
-    <p>Enter your email to receive daily feed updates.</p>
+  <section class="space-y-4">
+    <h1 class="text-3xl font-semibold tracking-tight">Subscribe</h1>
+    <div class="panel space-y-4">
+      <p>Enter your email to receive daily feed updates.</p>
 
-    <form action={FORMSUBMIT_ENDPOINT} method="POST">
-      <label for="subscribe-email">Email address</label>
-      <input id="subscribe-email" name="email" type="email" required autocomplete="email" />
+      <form action={FORMSUBMIT_ENDPOINT} method="POST" class="grid max-w-md gap-3">
+        <label for="subscribe-email" class="text-sm font-medium">Email address</label>
+        <input
+          id="subscribe-email"
+          name="email"
+          type="email"
+          required
+          autocomplete="email"
+          class="rounded-lg border border-border bg-background px-3 py-2"
+        />
 
-      <!-- Action marker -->
-      <input type="hidden" name="action" value="subscribe" />
+        <input type="hidden" name="action" value="subscribe" />
+        <input type="hidden" name="_subject" value="Research feed: subscribe" />
+        <input type="hidden" name="_next" value={NEXT_URL} />
+        <input type="text" name="_honey" style="display:none" tabindex={-1} autocomplete="off" />
 
-      <!-- FormSubmit settings -->
-      <input type="hidden" name="_subject" value="Research feed: subscribe" />
-      <input type="hidden" name="_next" value={NEXT_URL} />
+        <button
+          type="submit"
+          class="mt-1 w-fit rounded-lg border border-accent bg-accent px-4 py-2 text-sm font-semibold text-background transition hover:opacity-90"
+        >
+          Subscribe
+        </button>
+      </form>
 
-      <!-- Anti-spam honeypot (leave blank) -->
-      <input type="text" name="_honey" style="display:none" tabindex={-1} autocomplete="off" />
-
-      <button type="submit">Subscribe</button>
-    </form>
-
-    <p style="margin-top: 1rem; color: var(--muted);">
-      No verification for now. If you subscribed by mistake, use <a href="/unsubscribe/">unsubscribe</a>.
-    </p>
-  </div>
+      <p class="text-sm text-foreground/70">
+        No verification for now. If you subscribed by mistake, use <a href="/unsubscribe/">unsubscribe</a>.
+      </p>
+    </div>
+  </section>
 </BaseLayout>
