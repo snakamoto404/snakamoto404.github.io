@@ -3,7 +3,10 @@ import { getCollection } from 'astro:content';
 import BaseLayout from '../../layouts/BaseLayout.astro';
 
 const entries = await getCollection('archive');
-const sortedEntries = [...entries].sort((a, b) => b.data.date.localeCompare(a.data.date));
+
+const toIsoDate = (value: Date) => value.toISOString().slice(0, 10);
+
+const sortedEntries = [...entries].sort((a, b) => b.data.date.getTime() - a.data.date.getTime());
 ---
 
 <BaseLayout title="Archive | snakamoto404.github.io">
@@ -13,8 +16,8 @@ const sortedEntries = [...entries].sort((a, b) => b.data.date.localeCompare(a.da
     {
       sortedEntries.map((entry) => (
         <li class="list-item card">
-          <a href={`/archive/${entry.data.date}/`}>
-            <strong>{entry.data.date}</strong>
+          <a href={`/archive/${toIsoDate(entry.data.date)}/`}>
+            <strong>{toIsoDate(entry.data.date)}</strong>
           </a>
           <p>{entry.data.summary ?? 'No summary provided.'}</p>
         </li>

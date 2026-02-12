@@ -7,8 +7,10 @@ import BaseLayout from '../../layouts/BaseLayout.astro';
 export async function getStaticPaths() {
   const entries = await getCollection('archive');
 
+  const toIsoDate = (value: Date) => value.toISOString().slice(0, 10);
+
   return entries.map((entry) => ({
-    params: { date: entry.data.date },
+    params: { date: toIsoDate(entry.data.date) },
     props: { entry }
   }));
 }
@@ -19,14 +21,16 @@ interface Props {
 
 const { entry } = Astro.props;
 const { Content } = await entry.render();
+const toIsoDate = (value: Date) => value.toISOString().slice(0, 10);
+const isoDate = toIsoDate(entry.data.date);
 ---
 
-<BaseLayout title={`${entry.data.date} | Archive`} description={entry.data.summary}>
+<BaseLayout title={`${isoDate} | Archive`} description={entry.data.summary}>
   <article class="card">
     <p><a href="/archive/">Back to archive</a></p>
     <h1>{entry.data.title}</h1>
     <p>
-      <strong>Date:</strong> <time datetime={entry.data.date}>{entry.data.date}</time>
+      <strong>Date:</strong> <time datetime={isoDate}>{isoDate}</time>
     </p>
     <Content />
   </article>

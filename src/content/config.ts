@@ -4,7 +4,7 @@ const archive = defineCollection({
   type: 'content',
   schema: z.object({
     title: z.string(),
-    date: z.string().regex(/^\d{4}-\d{2}-\d{2}$/),
+    date: z.coerce.date(),
     summary: z.string().optional()
   })
 });
