@@ -1,14 +1,29 @@
 ---
 import BaseLayout from '../layouts/BaseLayout.astro';
+
+const FORMSUBMIT_ENDPOINT = 'https://formsubmit.co/snakamoto404@gmail.com';
+const NEXT_URL = 'https://snakamoto404.github.io/unsubscribed/';
 ---
 
 <BaseLayout title="Unsubscribe | snakamoto404.github.io">
   <h1>Unsubscribe</h1>
   <div class="card">
     <p>Enter your email to stop receiving daily feed updates.</p>
-    <form action="https://example.com/unsubscribe" method="post">
+
+    <form action={FORMSUBMIT_ENDPOINT} method="POST">
       <label for="unsubscribe-email">Email address</label>
       <input id="unsubscribe-email" name="email" type="email" required autocomplete="email" />
+
+      <!-- Action marker -->
+      <input type="hidden" name="action" value="unsubscribe" />
+
+      <!-- FormSubmit settings -->
+      <input type="hidden" name="_subject" value="Research feed: unsubscribe" />
+      <input type="hidden" name="_next" value={NEXT_URL} />
+
+      <!-- Anti-spam honeypot (leave blank) -->
+      <input type="text" name="_honey" style="display:none" tabindex={-1} autocomplete="off" />
+
       <button type="submit">Unsubscribe</button>
     </form>
   </div>
