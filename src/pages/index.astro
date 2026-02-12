@@ -1,17 +1,48 @@
 ---
+import { getCollection } from 'astro:content';
 import BaseLayout from '../layouts/BaseLayout.astro';
+
+const entries = await getCollection('archive');
+const toIsoDate = (value: Date) => value.toISOString().slice(0, 10);
+const latest = [...entries]
+  .sort((a, b) => b.data.date.getTime() - a.data.date.getTime())
+  .slice(0, 7);
 ---
 
 <BaseLayout title="Home | snakamoto404.github.io">
   <h1>Daily Feed Archive</h1>
+
   <div class="card">
     <p>
-      This site is a lightweight daily feed archive. Each day has its own markdown-backed page at
-      <code>/archive/YYYY-MM-DD/</code>, with links, notes, and comments.
+      This is a lightweight daily feed archive. Each day has its own markdown-backed page at
+      <code>/archive/YYYY-MM-DD/</code>.
     </p>
     <p>
-      Start browsing at <a href="/archive/">the archive index</a>, or manage updates via
-      <a href="/subscribe/">subscribe</a> and <a href="/unsubscribe/">unsubscribe</a>.
+      Subscribe here: <a href="/subscribe/">/subscribe</a> · Unsubscribe: <a href="/unsubscribe/">/unsubscribe</a>.
     </p>
   </div>
+
+  <h2 style="margin-top: 2rem;">Latest</h2>
+  {
+    latest.length ? (
+      <ul class="list-reset">
+        {latest.map((entry) => (
+          <li class="list-item card">
+            <a href={`/archive/${toIsoDate(entry.data.date)}/`}>
+              <strong>{toIsoDate(entry.data.date)}</strong>
+            </a>
+            <p>{entry.data.summary ?? 'No summary provided.'}</p>
+          </li>
+        ))}
+      </ul>
+    ) : (
+      <div class="card">
+        <p>No entries yet. Check back soon.</p>
+      </div>
+    )
+  }
+
+  <p style="margin-top: 1rem;">
+    <a href="/archive/">Browse all entries →</a>
+  </p>
 </BaseLayout>
