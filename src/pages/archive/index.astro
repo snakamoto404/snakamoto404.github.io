@@ -9,9 +9,9 @@ const toIsoDate = (value: Date) => value.toISOString().slice(0, 10);
 const sortedEntries = [...entries].sort((a, b) => b.data.date.getTime() - a.data.date.getTime());
 ---
 
-<BaseLayout title="Archive | snakamoto404.github.io">
-  <h1>Archive</h1>
-  <p>Browse all available daily feed entries.</p>
+<BaseLayout title="Past content | snakamoto404.github.io">
+  <h1>Past content</h1>
+  <p>Browse all available entries.</p>
   <ul class="list-reset">
     {
       sortedEntries.map((entry) => (
