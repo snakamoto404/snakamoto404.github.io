@@ -9,6 +9,7 @@ Astro static site scaffolded for GitHub Pages user-site hosting.
 - Daily archive pages at `/archive/YYYY-MM-DD/` from markdown content collection
 - Subscribe and unsubscribe form pages at `/subscribe/` and `/unsubscribe/`
 - Giscus comments component on each daily archive page
+- LaTeX/math rendering in Markdown (remark-math + rehype-katex)
 - GitHub Actions workflow for Pages deployment
 
 ## Reproducible environment
