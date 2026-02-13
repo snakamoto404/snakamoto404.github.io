@@ -1,0 +1,63 @@
+---
+import { getCollection } from 'astro:content';
+import BaseLayout from '../../layouts/BaseLayout.astro';
+
+const entries = await getCollection('blogs');
+const toIsoDate = (value: Date) => value.toISOString().slice(0, 10);
+
+const sortedEntries = [...entries].sort((a, b) => b.data.date.getTime() - a.data.date.getTime());
+
+const toTopicLabel = (value: string) =>
+  value
+    .split('-')
+    .map((part) => part.charAt(0).toUpperCase() + part.slice(1))
+    .join(' ');
+
+const groupedByTopic = sortedEntries.reduce<Map<string, typeof sortedEntries>>((acc, entry) => {
+  const topic = entry.slug.split('/')[0] ?? 'general';
+  const existing = acc.get(topic) ?? [];
+  existing.push(entry);
+  acc.set(topic, existing);
+  return acc;
+}, new Map());
+
+const topicGroups = [...groupedByTopic.entries()].sort(([a], [b]) => a.localeCompare(b));
+---
+
+<BaseLayout title="Blogs | snakamoto404.github.io" description="Topic-grouped blog posts.">
+  <section class="space-y-6">
+    <div class="space-y-2">
+      <h1 class="text-3xl font-semibold tracking-tight">Blogs</h1>
+      <p class="text-sm text-foreground/80">Markdown-backed posts grouped by topic.</p>
+    </div>
+
+    {
+      topicGroups.length ? (
+        <div class="space-y-6">
+          {topicGroups.map(([topic, topicEntries]) => (
+            <section class="space-y-3">
+              <h2 class="text-xl font-semibold tracking-tight">{toTopicLabel(topic)}</h2>
+              <ul class="space-y-3">
+                {topicEntries.map((entry) => (
+                  <li class="panel">
+                    <a href={`/blogs/${entry.slug}/`} class="text-base font-semibold hover:text-accent">
+                      {entry.data.title}
+                    </a>
+                    <p class="mt-2 text-sm text-foreground/80">
+                      <strong>Date:</strong> <time datetime={toIsoDate(entry.data.date)}>{toIsoDate(entry.data.date)}</time>
+                    </p>
+                    <p class="mt-2 text-sm text-foreground/85">{entry.data.summary ?? 'No summary provided.'}</p>
+                  </li>
+                ))}
+              </ul>
+            </section>
+          ))}
+        </div>
+      ) : (
+        <div class="panel">
+          <p>No blog posts found.</p>
+        </div>
+      )
+    }
+  </section>
+</BaseLayout>

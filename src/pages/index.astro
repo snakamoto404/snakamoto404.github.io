@@ -3,10 +3,14 @@ import { getCollection } from 'astro:content';
 import BaseLayout from '../layouts/BaseLayout.astro';
 
 const entries = await getCollection('archive');
+const blogEntries = await getCollection('blogs');
 const toIsoDate = (value: Date) => value.toISOString().slice(0, 10);
 const latest = [...entries]
   .sort((a, b) => b.data.date.getTime() - a.data.date.getTime())
   .slice(0, 7);
+const latestBlogs = [...blogEntries]
+  .sort((a, b) => b.data.date.getTime() - a.data.date.getTime())
+  .slice(0, 5);
 ---
 
 <BaseLayout title="Home | snakamoto404.github.io">
@@ -46,6 +50,34 @@ const latest = [...entries]
           </div>
         )
       }
+    </section>
+
+    <section class="space-y-3">
+      <h2 class="text-xl font-semibold tracking-tight">Blogs</h2>
+      {
+        latestBlogs.length ? (
+          <ul class="space-y-3">
+            {latestBlogs.map((entry) => (
+              <li class="panel">
+                <a href={`/blogs/${entry.slug}/`} class="text-base font-semibold hover:text-accent">
+                  {entry.data.title}
+                </a>
+                <p class="mt-2 text-sm text-foreground/80">
+                  <strong>Date:</strong> <time datetime={toIsoDate(entry.data.date)}>{toIsoDate(entry.data.date)}</time>
+                </p>
+                <p class="mt-2 text-sm text-foreground/85">{entry.data.summary ?? 'No summary provided.'}</p>
+              </li>
+            ))}
+          </ul>
+        ) : (
+          <div class="panel">
+            <p>No blog posts yet.</p>
+          </div>
+        )
+      }
+      <p class="text-sm">
+        <a href="/blogs/" class="font-medium">Browse all blogs -></a>
+      </p>
     </section>
 
     <p class="text-sm">

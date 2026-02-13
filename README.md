@@ -11,21 +11,33 @@ Astro static site scaffolded for GitHub Pages user-site hosting.
 - Giscus comments component on each daily archive page
 - GitHub Actions workflow for Pages deployment
 
+## Reproducible environment
+
+- Node is pinned to **v20** via `.nvmrc` / `.node-version` (matches GitHub Pages CI).
+- Dependencies are locked via `package-lock.json`; prefer `npm ci` for deterministic installs.
+
 ## Local setup
 
-1. Install dependencies:
+1. Install Node 20 (pick one):
 
 ```bash
-npm install
+nvm use
+# or: fnm use
 ```
 
-2. Run dev server:
+2. Install dependencies (deterministic):
+
+```bash
+npm ci
+```
+
+3. Run dev server:
 
 ```bash
 npm run dev
 ```
 
-3. Build for production:
+4. Build for production:
 
 ```bash
 npm run build

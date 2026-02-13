@@ -1,0 +1,53 @@
+---
+import type { CollectionEntry } from 'astro:content';
+import { getCollection } from 'astro:content';
+import GiscusComments from '../../components/GiscusComments.astro';
+import BaseLayout from '../../layouts/BaseLayout.astro';
+
+export async function getStaticPaths() {
+  const entries = await getCollection('blogs');
+
+  return entries.map((entry) => ({
+    params: { slug: entry.slug },
+    props: { entry }
+  }));
+}
+
+interface Props {
+  entry: CollectionEntry<'blogs'>;
+}
+
+const { entry } = Astro.props;
+const { Content } = await entry.render();
+const toIsoDate = (value: Date) => value.toISOString().slice(0, 10);
+const isoDate = toIsoDate(entry.data.date);
+const topic = entry.slug.split('/')[0] ?? 'general';
+const topicLabel = topic
+  .split('-')
+  .map((part) => part.charAt(0).toUpperCase() + part.slice(1))
+  .join(' ');
+---
+
+<BaseLayout title={`${entry.data.title} | Blogs`} description={entry.data.summary}>
+  <article class="panel space-y-5">
+    <p class="text-sm">
+      <a href="/blogs/" class="font-medium">Back to blogs</a>
+    </p>
+
+    <header class="space-y-2 border-b border-border/80 pb-4">
+      <h1 class="text-2xl font-semibold tracking-tight">{entry.data.title}</h1>
+      <p class="text-sm text-foreground/80">
+        <strong>Topic:</strong> {topicLabel}
+      </p>
+      <p class="text-sm text-foreground/80">
+        <strong>Date:</strong> <time datetime={isoDate}>{isoDate}</time>
+      </p>
+    </header>
+
+    <div class="app-prose">
+      <Content />
+    </div>
+  </article>
+
+  <GiscusComments />
+</BaseLayout>
