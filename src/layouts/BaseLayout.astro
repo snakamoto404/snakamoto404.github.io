@@ -6,7 +6,7 @@ interface Props {
   description?: string;
 }
 
-const { title, description = 'Daily feed archive for snakamoto404.github.io' } = Astro.props;
+const { title, description = 'Daily feed archive by Romulus' } = Astro.props;
 
 const pathname = Astro.url.pathname;
 const navItems = [
@@ -37,7 +37,7 @@ const isActivePath = (href: string) => {
     <header class="border-b border-border/80 bg-background/95 backdrop-blur">
       <div class="app-layout py-5">
         <div class="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-          <a href="/" class="text-lg font-semibold tracking-tight">snakamoto404</a>
+          <a href="/" class="text-lg font-semibold tracking-tight">Romulus</a>
           <nav aria-label="Main navigation" class="-mx-1 flex flex-wrap items-center gap-x-1 gap-y-2 text-sm">
             {
               navItems.map((item) => (
