@@ -2,7 +2,7 @@
 
 @layer base {
   .app-prose {
-    @apply prose prose-neutral max-w-none leading-7;
+    @apply prose prose-neutral max-w-none min-w-0 leading-7 overflow-x-clip;
 
     h1,
     h2,
@@ -74,12 +74,28 @@
     }
 
     pre {
-      @apply focus-visible:border-transparent focus-visible:outline-2 focus-visible:outline-accent focus-visible:outline-dashed;
+      @apply max-w-full overflow-x-auto focus-visible:border-transparent focus-visible:outline-2 focus-visible:outline-accent focus-visible:outline-dashed;
+      -webkit-overflow-scrolling: touch;
+    }
+
+    table {
+      @apply block max-w-full overflow-x-auto;
+      -webkit-overflow-scrolling: touch;
+    }
+
+    .katex-display {
+      @apply my-6 max-w-full overflow-x-auto overflow-y-hidden;
+      -webkit-overflow-scrolling: touch;
+    }
+
+    .katex-display > .katex {
+      min-width: max-content;
     }
   }
 
   .astro-code {
-    @apply flex border border-border bg-(--shiki-light-bg) text-(--shiki-light) [&_span]:text-(--shiki-light);
+    @apply flex max-w-full overflow-x-auto border border-border bg-(--shiki-light-bg) text-(--shiki-light) [&_span]:text-(--shiki-light);
+    -webkit-overflow-scrolling: touch;
   }
 
   html[data-theme="dark"] .astro-code {

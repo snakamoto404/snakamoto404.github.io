@@ -42,7 +42,7 @@ html[data-theme="dark"] {
   }
 
   body {
-    @apply flex min-h-svh flex-col bg-background font-app text-foreground selection:bg-accent/75 selection:text-background;
+    @apply flex min-h-svh flex-col overflow-x-clip bg-background font-app text-foreground selection:bg-accent/75 selection:text-background;
   }
 
   a,
