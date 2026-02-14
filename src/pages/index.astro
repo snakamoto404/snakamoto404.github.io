@@ -16,12 +16,11 @@ const latestBlogs = [...blogEntries]
 <BaseLayout title="Home | Romulus">
   <section class="space-y-6">
     <div class="space-y-2">
-      <h1 class="text-3xl font-semibold tracking-tight">Daily Feed Archive</h1>
-      <p class="text-sm text-foreground/80">Markdown-backed daily entries with clean, stable permalinks.</p>
+      <h1 class="text-3xl font-semibold tracking-tight">Romulus</h1>
     </div>
 
     <section class="space-y-3">
-      <h2 class="text-xl font-semibold tracking-tight">Latest</h2>
+      <h2 class="text-xl font-semibold tracking-tight">Research Feed</h2>
       {
         latest.length ? (
           <ul class="space-y-3">
@@ -72,6 +71,8 @@ const latestBlogs = [...blogEntries]
 
     <p class="text-sm">
       <a href="/archive/" class="font-medium">Browse all entries -></a>
+      &nbsp;&middot;&nbsp;
+      <a href="/subscribe/" class="font-medium">Manage subscription</a>
     </p>
   </section>
 </BaseLayout>

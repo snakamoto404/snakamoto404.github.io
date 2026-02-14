@@ -2,15 +2,22 @@
 import BaseLayout from '../layouts/BaseLayout.astro';
 
 const FORMSUBMIT_ENDPOINT = 'https://formsubmit.co/snakamoto404@gmail.com';
-const NEXT_URL = 'https://snakamoto404.github.io/subscribed/';
+const SUB_NEXT = 'https://snakamoto404.github.io/subscribed/';
+const UNSUB_NEXT = 'https://snakamoto404.github.io/unsubscribed/';
 ---
 
 <BaseLayout title="Subscribe | Romulus">
-  <section class="space-y-4">
-    <h1 class="text-3xl font-semibold tracking-tight">Subscribe</h1>
-    <div class="panel space-y-4">
-      <p>Enter your email to receive daily feed updates.</p>
+  <section class="space-y-6">
+    <div class="space-y-2">
+      <h1 class="text-3xl font-semibold tracking-tight">Research Feed — Email Updates</h1>
+      <p class="text-foreground/85">
+        A daily curated selection of papers, videos, and tools at the intersection of ML, quantitative research, and mathematical structure.
+        Delivered to your inbox each morning.
+      </p>
+    </div>
 
+    <div class="panel space-y-4">
+      <h2 class="text-xl font-semibold tracking-tight">Subscribe</h2>
       <form action={FORMSUBMIT_ENDPOINT} method="POST" class="grid max-w-md gap-3">
         <label for="subscribe-email" class="text-sm font-medium">Email address</label>
         <input
@@ -19,12 +26,13 @@ const NEXT_URL = 'https://snakamoto404.github.io/subscribed/';
           type="email"
           required
           autocomplete="email"
+          placeholder="you@example.com"
           class="rounded-lg border border-border bg-background px-3 py-2"
         />
 
         <input type="hidden" name="action" value="subscribe" />
         <input type="hidden" name="_subject" value="Research feed: subscribe" />
-        <input type="hidden" name="_next" value={NEXT_URL} />
+        <input type="hidden" name="_next" value={SUB_NEXT} />
         <input type="text" name="_honey" style="display:none" tabindex={-1} autocomplete="off" />
 
         <button
@@ -34,10 +42,35 @@ const NEXT_URL = 'https://snakamoto404.github.io/subscribed/';
           Subscribe
         </button>
       </form>
+    </div>
 
-      <p class="text-sm text-foreground/70">
-        No verification for now. If you subscribed by mistake, use <a href="/unsubscribe/">unsubscribe</a>.
-      </p>
+    <div class="panel space-y-4">
+      <h2 class="text-xl font-semibold tracking-tight">Unsubscribe</h2>
+      <p class="text-sm text-foreground/70">No longer want to receive the feed? Enter your email below.</p>
+      <form action={FORMSUBMIT_ENDPOINT} method="POST" class="grid max-w-md gap-3">
+        <label for="unsubscribe-email" class="text-sm font-medium">Email address</label>
+        <input
+          id="unsubscribe-email"
+          name="email"
+          type="email"
+          required
+          autocomplete="email"
+          placeholder="you@example.com"
+          class="rounded-lg border border-border bg-background px-3 py-2"
+        />
+
+        <input type="hidden" name="action" value="unsubscribe" />
+        <input type="hidden" name="_subject" value="Research feed: unsubscribe" />
+        <input type="hidden" name="_next" value={UNSUB_NEXT} />
+        <input type="text" name="_honey" style="display:none" tabindex={-1} autocomplete="off" />
+
+        <button
+          type="submit"
+          class="mt-1 w-fit rounded-lg border border-border bg-background px-4 py-2 text-sm font-semibold transition hover:bg-foreground/5"
+        >
+          Unsubscribe
+        </button>
+      </form>
     </div>
   </section>
 </BaseLayout>
