@@ -6,9 +6,21 @@ summary: "What I learned about programming by trying to program agents — and w
 
 I started using [OpenClaw](https://github.com/openclaw/openclaw) expecting a smarter chat interface. Something like the web-based assistants I'd used before — Claude, ChatGPT — but persistent, with memory, tools, and automation. I'd talk to it, it would do things. Magic unicorn.
 
-A few weeks in, I realized I was wrong about what I was doing. Not wrong about what the system *could* do — wrong about the activity itself. I wasn't "chatting with an AI." I was programming. And the programming was subject to the same design principles, the same failure modes, and the same hard-won mindset that applies to any serious software.
+Two days in, I realized I was wrong about what I was doing. Not wrong about what the system *could* do — wrong about the activity itself. I wasn't "chatting with an AI." I was programming. And the programming was subject to the same design principles, the same failure modes, and the same hard-won mindset that applies to any serious software.
 
 This post is about that realization and where it leads. It connects to Andrej Karpathy's framing of [Software 3.0](https://www.youtube.com/watch?v=LCEmiRjPEtQ) — programming in natural language — but I arrived at it through practice before I had a name for it. The patterns I'll describe aren't theoretical proposals. They're things I discovered by breaking my own system and figuring out why.
+
+### Contents
+
+- [From chat to programming](#from-chat-to-programming)
+- [The program/data separation](#the-programdata-separation)
+- [The kernel emerges](#the-kernel-emerges)
+- [Dangling pointers and other familiar bugs](#dangling-pointers-and-other-familiar-bugs)
+- [Where we are: a kernel-only OS with raw memory access](#where-we-are-a-kernel-only-os-with-raw-memory-access)
+- [What classical software tells us to build next](#what-classical-software-tells-us-to-build-next)
+- [Caveats and differences](#caveats-and-differences)
+- [The connection to Software 3.0](#the-connection-to-software-30)
+- [What I'm betting on](#what-im-betting-on)
 
 ---
 
@@ -16,7 +28,7 @@ This post is about that realization and where it leads. It connects to Andrej Ka
 
 I've been using AI coding tools for a while — Claude's web interface, Claude Code, Codex. These are powerful, but they share a common model: the session is the primary unit. You open a conversation, you get output, the conversation ends (or gets compacted). Context is transient by design.
 
-OpenClaw felt different from the start. The default `AGENTS.md` — a configuration file that ships with every workspace — treats context and persistent data as first-class citizens. Sessions come and go, but the workspace endures. Files persist between conversations. Instructions carry across sessions. The system has *state* in a way that a chat window doesn't.
+OpenClaw felt different from the start. The default `AGENTS.md` — a configuration file that ships with every workspace — <u>treats context and persistent data as first-class citizens</u>. Sessions come and go, but the workspace endures. Files persist between conversations. Instructions carry across sessions. The system has *state* in a way that a chat window doesn't.
 
 That inversion was the first mindset shift: **sessions are not the program. Sessions are processes running on top of something more permanent.** The workspace is the operating environment. Sessions are programs that execute within it, reading from and writing to shared state.
 
@@ -46,7 +58,7 @@ memory/       → runtime artifacts, session journals (the "filesystem")
 
 This is the same distinction that operating systems enforce between text segments and data segments during program execution. It's not a cosmetic preference — it's a correctness property. Instructions should not be mutated by runtime output. Data should not be confused with executable behavior.
 
-The improvement was immediate. Behavioral consistency across sessions stabilized. Debugging became tractable — if the agent is misbehaving, I know to look in `operations/`, not in a sprawling memory dump. And new automations became easier to add because the instruction surface was clean and bounded.
+Behavioral consistency across sessions stabilized. Debugging became tractable — if the agent is misbehaving, I know to look in `operations/`, not in a sprawling memory dump. And new automations became easier to add because the instruction surface was clean and bounded.
 
 ---
 
@@ -75,8 +87,7 @@ The `AGENTS.md` file — which I started interpreting as a **bootloader** — pr
 
 That's an `init` sequence. Not figuratively — operationally. The order matters. Skip step 3 and the agent doesn't know what it was working on. Load step 5 before step 1 and the behavioral identity isn't established before instructions execute. Just like a real boot sequence, getting this wrong doesn't produce an error message — it produces subtly wrong behavior that's hard to diagnose.
 
-<details>
-<summary><strong>Our current metaprogramming invariants (collapsible)</strong></summary>
+*Our current metaprogramming invariants:*
 
 1. **Boot sequence integrity** — deterministic load order; all referenced files must exist and be non-empty
 2. **README routing invariant** — every directory under `operations/` has a README.md with routing context + update hooks
@@ -88,8 +99,6 @@ That's an `init` sequence. Not figuratively — operationally. The order matters
 8. **Cross-file sweep on modification** — changes to referenced paths must include a sweep of all referencing files
 9. **Ops feedback is a pointer, not a store** — operational files in `operations/` route to `memory/` for dated artifacts
 10. **Cron payloads are minimal pointers** — behavioral specs live in README.md, not in cron job definitions
-
-</details>
 
 ---
 
