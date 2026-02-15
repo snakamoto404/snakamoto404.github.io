@@ -94,11 +94,22 @@
   }
 
   .astro-code {
-    @apply flex max-w-full overflow-x-auto border border-border bg-(--shiki-light-bg) text-(--shiki-light) [&_span]:text-(--shiki-light);
+    @apply flex max-w-full overflow-x-auto border border-border;
     -webkit-overflow-scrolling: touch;
+    background-color: #f3f4f6 !important;
+    color: #111827 !important;
+  }
+
+  .astro-code span {
+    color: inherit !important;
   }
 
   html[data-theme="dark"] .astro-code {
-    @apply bg-(--shiki-dark-bg) text-(--shiki-dark) [&_span]:text-(--shiki-dark);
+    background-color: #111827 !important;
+    color: #e5e7eb !important;
+  }
+
+  html[data-theme="dark"] .astro-code span {
+    color: inherit !important;
   }
 }
