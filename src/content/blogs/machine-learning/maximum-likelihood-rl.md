@@ -28,7 +28,7 @@ whose gradient upweights low-pass-rate inputs by a factor $1/p_\theta(x)$.
 - Experiments demonstrating strong Pareto improvements over common baselines (e.g. GRPO/RLOO) including up to **(~20x)** rollout scaling efficiency gains in their reasoning setups.
 
 ### What's new here 
-Luckily for our understanding-by-practice purposes, the authors focus on the binary, discrete-reward setting. This post unpacks the following qualitative behavior of MaxRL:
+Luckily for our understand-by-practice purposes, the authors focus on the binary, discrete-reward setting. This post unpacks the following qualitative behavior of MaxRL:
 
 - is *sharper* than direct objectives, admitting a natural bounded truncation that interpolates RL -> ML with rollout budget,
 - fixing a prompt/sample, **upweights the most successful rollouts** (soft-max / log-sum-exp behavior),
