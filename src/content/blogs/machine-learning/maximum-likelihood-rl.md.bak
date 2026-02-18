@@ -1,0 +1,136 @@
+---
+title: "Maximum likelihood reinforcement learning"
+date: 2026-02-16
+summary: "A highly principled foundational RL paper with easily actionable changes. We derive the continuous generalization."
+---
+
+I've always wondered what happens if one applies RL to supervisable tasks. For example, given a binary classifiction task $(x_j, y_j)$, maximize accuracy as the reward $R = \mathbb E\, [yp_\theta(x)+\bar y\bar p_\theta(x)]$. No one has tried this, presumably for good reasons; how does such this model compare to a normal model trained using cross-entropy?
+
+Well, turns out that a highly impressive [recent paper](https://arxiv.org/pdf/2602.02710) from CMU goes down this rabbit hole -- and comes up with actionable, principled insights. They claim ... [empirical claims here, precise]. 
+
+Luckily, the authors only focused on the binary, discrete-reward setting. Both as an extremely useful application--especially for low signal-to-noise regression tasks--but more important as an exercise to understand the paper, we generalize the maximum-likelihood principle to RL with regression tasks. 
+
+Qualitatively, the maximum-likelihood RL objective:
+- Is sharper and lower bounded by direct objectives. 
+- Fixing a prompt (sample), upweights the most successful rollouts. 
+- Marginalizing over rollouts, upweights the most difficult prompts. 
+
+## Contents
+
+Table of contents. Fill out. 
+
+## Preamble / ramble on MLE
+
+Maximum likelihood estimation (MLE) is a ~axiomatic, philosophical principle. It says that given finite data $x\sim \rho$ and parametric family $p_\theta$ of distributions, we should pick $\theta$ which maximizes the likelihood of the observed data under our model. 
+
+- Classification is MLE: we assume data-label pairs $(x, y)\sim \rho$ and model $p_\theta(y\mid x)$. 
+- Regression is MLE: the standard MSE loss if MLE under Gaussian noise model; L1 loss is MLE under Laplacian distribution (detour). 
+- Variational auto-encoder is MLE: ...
+
+Taken the ubiquiticity of MLE, it's actually surprising that Maximum-likelihood RL (MaxRL) hasn't been discovered sonner. 
+
+But why do we supervise by cross-entropy (maximum-likelihood) $\mathbb E \log p_\theta(y\mid x)$ rather than accuracy $\mathbb E\, p_\theta(y\mid x)$? One mechanistic interpretation is looks at the gradient
+$...$
+
+> Maximum likelihood upweights difficult samples aggressively, updating the model on the frontier of its understanding. 
+
+*Addendum: I wouldn't read into this too much except as a side-effect interpretation. The MLE principle itself is much more foundational than simply upweighting hard samples, which can be done in many non-canonical ways. However, this interpretation is important to understand the qualitative behavior of MaxRL. 
+
+<details>Fill out: information theory / compression perspective</details>
+
+---
+
+## Formulation, notation
+
+Let's start with the typical LLM-RL setting with binary verifier:
+- We have a dataset of math problems $(x, y)\sim \rho$ together with answers $y$
+- We also have a sequence model $m_\theta(\cdot \mid x)$. We can sample rollouts $z\sim m_\theta(\cdot \mid x)$ and differentiably evaluate the probability $m_\theta(z\mid x)$. 
+    - The sampling process is non-differentiable; this is why we use RL in the first case. 
+- Given a rollout, such as a chain of thought, we can parse it to obtain a candidate answer $\hat y(x)$; we can check equivalence $\mathbf 1[\hat y=y]$
+- Typically, we maximize the objective 
+$$
+    J_{\mathrm{RL}} = \mathbb E_{(x, y)\sim \rho} \mathbb E_{z\sim m_\theta(\cdot \mid x)} \mathbf 1[\hat y(z)=y]
+$$
+- Fixing $x, y$, we can evaluate the rollout infinitely many times to estimate $p_\theta(x)=\mathbb E_{z\sim m_\theta(\cdot \mid x)} \mathbf 1[\hat y(z)=y]$. 
+
+Let's start making some general definitions:
+- Dataset $(x, y)\sim \rho$, sequence model and rollout $z\sim m_\theta(\cdot \mid x)$. 
+- **More generally**, we interpret the model rollout as describing a posterior $\hat y\sim \hat P(\cdot \mid z)$. 
+    - In binary classification, $\hat P$ is just indicator over the proposed answer $\hat y$.
+    - In Gaussian regression, we parse a point-estimate $\hat y$ and $\hat P(y \mid x) = \mathcal N(\hat y, \sigma^2)$ where $\sigma^2$ is generally a constant. 
+    - One might also imagine discretizing the range of $y$ into bins and running classification, in which case $\hat P(\cdot \mid x)$ has explicit non-parametric form. 
+- Define the **likelihood** $l(y, z) = \hat P(y\mid z)$. 
+- **Critical**: we can marginalize over $z$ to obtain the conditional likelihood $p_\theta(y\mid x) = \mathbb E_{z\sim m_\theta(\cdot \mid x)} l(y, z)$.
+- Another quantity which will come in handy is the **score** $S$; it's dependent upon sample $x$ and rollout $z$:
+$$S(x, z) = \nabla_\theta\, \log m_\theta(z\mid x)$$
+
+This vectors is almost always **the only** intermediate through which model parameters $\theta$ are related to RL objectives, in any policy-based RL algorithm. Most algorithms play around with reweighting or shifting these score vectors. 
+
+Note that this definition subsumes supervised learning when the latent variable $z$ is trivial. Understanding the formulation above goes 60% of the way in understanding the paper's contribution. 
+
+---
+
+## Direct RL as a Maximum Likelihood approximation
+
+Here, we will show that:
+- Direct RL <-> MaxRL is analogous to optimizing accuracy v. cross-entropy. 
+- The direct objective is a loose lower-bound ob
+
+The maximum likelihood objective for supervised learning is 
+$$
+    J = \mathbb E_{(x, y)\sim \rho} \log p_\theta(y\mid x)
+$$
+Expanding with our formalism above 
+$$
+    J = \mathbb E_{(x, y)\sim \rho} \log \mathbb E_{z\sim m_\theta(\cdot \mid x)} l(y, z) 
+$$
+Good. Let's substitute some old friends and look at what we end up with
+
+### Binary reasoning setup
+
+In the binary reasoning setup, the typical reward is the expected pass rate 
+$$J_{\mathrm{pass}} = \mathbb E_{(x, y)\sim \rho} \mathbb E_{z\sim m_\theta(\cdot \mid x)} \mathbf 1[\hat y(z) = y] = \mathbb E_{(x, y)\sim \rho} p_\theta(y\mid x)$$
+Which translates to: averaging across all tasks and samples, maximize the probably of our rollout's answer being correct. 
+
+Using the maximum-likelihood formula, we want to optimize the **log-likelihood**: 
+$$J = \mathbb E_{(x, y)\sim \rho} \log p_\theta(y\mid x) = \mathbb E_{(x, y)\sim \rho} \log \mathbb E_{z\sim m_\theta(\cdot \mid x)} \mathbf 1[\hat y(z) = y]$$
+
+Ah, there's a difference! 
+
+### Continuous regression 
+
+Let's specialize to the Gaussian noise model, in which 
+$$l(y, z)=\hat P(y\mid z) = \mathcal N(\hat y(z), \sigma^2=1)(y) = \dfrac 1 {\sqrt{2\pi}} \exp \left[-\dfrac{(y-\hat y)^2}{2}\right]$$
+Substituting into [equation ref], we obtain 
+$$
+    J = \mathbb E_{(x, y)\sim \rho} \log \mathbb E_{z\sim m_\theta(\cdot \mid x)}  l(y, z) = \mathbb E_{(x, y)\sim \rho} \log \mathbb E_{z\sim m_\theta(\cdot \mid x)}  \exp \left[-\dfrac{(y-\hat y)^2}{2}\right]
+$$
+Recognizing that $\log l(y, z) \approx -(y-\hat y)^2$ up to optimization-negligible terms, we see that the "intuitive" MSE reward is equivalent to 
+$$J_{\mathrm{mse}} = \mathbb E_{(x, y)\sim \rho} \mathbb E_{z\sim m_\theta(\cdot \mid x)}  l(y, z)$$
+
+### Putting them together: Jenson and Taylor
+
+Here, we fix $x, y$ and suppress $p_\theta \mapsto p$ to reduce clutter. Remember their definition & dependences! 
+
+[Taylor expansion construction here. Please explicitly write $J_T(p)=...$. Also explicitly derive $\nabla_\theta J_T(p) = ..... = \sum .... S$. Define the score carefully]
+
+[Two important remarks about the qualitative behavior of MaxRL]
+
+Remark 1: staring at [eq-ref], it's a log-sum-exp, i.e. a soft maximum. This means that **fixing a sample, MaxRL reinforces the most successful rollout**. 
+
+Remark 2: The gradient $\nabla J = \mathbb E_{x, y}\left[1/p_\theta \cdot \nabla p_\theta\right]$ implies that marginalizing over rollouts, **MaxRL reinforces the least successful samples**. 
+
+
+## Gradient estimators
+
+Here, you say, "all's great! There's this beautiful thery and a highly principled objective. How are we going about optimizing it?" 
+
+The original paper works out an unbiased estimator for the $T$-th order truncated objective $J_T$ in the binary setting. Sadly, it doesn't generalize to the full class of supervised objectives. Here, we work out a generalization. 
+
+### Binary case
+
+Pap
+
+### Generalization
+
+General supervised-learning likelihood objectives do not have this clean factorization. In particular, if want an unbiased estimate of $w_T(p)$ and $\nabla p$ using each of their unbiased estimates, the estimators must be uncorrelated. [elaborate a bit here]. One standard trick is to use leave-one-out estimation: 
