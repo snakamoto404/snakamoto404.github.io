@@ -69,7 +69,7 @@ So difficult cases (small $p_\theta$) get amplified by $1/p_\theta$.
 
 > Maximum likelihood upweights difficult samples aggressively, updating the model on the frontier of its understanding.
 
-*Addendum:* I would not over-interpret this as the *principle* itself. It's a side-effect interpretation. The principle is still MLE. For example, from an info-theory perspective, maximizing log-likelihood equals minimizing expected code length under the model. In this lens, each example contributes $-\log p_\theta(y\mid x)$ nats of surprise. Hard examples are expensive in description length, so ML naturally spends gradient budget there.
+*Addendum:* I would not over-interpret this as the *principle* itself. It's a side-effect interpretation. The principle is still MLE. One example of a canonical interpretation of MLE comes from an information-theory perspective, where MLE is a compression objective that minimizes expected code length under the model. In this lens, each example contributes $-\log p_\theta(y\mid x)$ nats of surprise. Hard examples are expensive in description length, so ML naturally spends gradient budget there.
 
 
 ## Formulation, notation
