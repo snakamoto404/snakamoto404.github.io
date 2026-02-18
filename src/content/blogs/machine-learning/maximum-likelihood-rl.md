@@ -4,7 +4,7 @@ date: 2026-02-16
 summary: "A highly principled foundational RL paper with easily actionable changes. We derive the continuous generalization."
 ---
 
-I've always wondered what happens if one applies RL to supervisable tasks. For example, given a binary classification task $(x_j, y_j)$, maximize accuracy as the reward
+I've always wondered what happens if one applies RL to supervisable tasks. For example, given a binary classification task $(x_k, y_k)$, maximize accuracy as the reward
 $$
 R := \mathbb E\,[y\,p_\theta(x)+(1-y)(1-p_\theta(x))].
 $$
@@ -28,23 +28,35 @@ whose gradient upweights low-pass-rate inputs by a factor $1/p_\theta(x)$.
 - Experiments demonstrating strong Pareto improvements over common baselines (e.g. GRPO/RLOO) including up to **(~20x)** rollout scaling efficiency gains in their reasoning setups.
 
 ### What's new here 
-Luckily (for us), the authors focus on the binary, discrete-reward setting. This post unpacks the following qualitative behavior of MaxRL 
+Luckily (for us), the authors focus on the binary, discrete-reward setting. This post unpacks the following qualitative behavior of MaxRL:
 
 - is *sharper* than (and lower-bounded by) direct objectives, admitting a natural bounded truncation that interpolates RL -> ML with rollout budget,
 - fixing a prompt/sample, **upweights the most successful rollouts** (soft-max / log-sum-exp behavior),
 - marginalizing over rollouts, **upweights the most difficult prompts** via inverse-probability reweighting.
 
-we also put forward a generalization that abstracts at the level of per-rollout likelihood, admitting application to e.g. regression tasks. We expect this generalization to be highly applicable to regression RL tasks with low signal to noise ratio. 
+We also put forward a generalization that abstracts at the level of per-rollout likelihood, admitting application to e.g. regression tasks. We expect this generalization to be highly applicable to regression RL tasks with low signal-to-noise ratio. 
+
+[Math is cheap, just show me the code](#pseudocode-pytorch-style-generalized-maxrl)
+
+
+[math is cheap show me the code](#pseudocode-pytorch-style-generalized-maxrl)
 
 ## Contents
 
+- [What's in the paper](#whats-in-the-paper)
+- [What's new here](#whats-new-here)
 - [Preamble / ramble on MLE](#preamble--ramble-on-mle)
+- [Why cross-entropy instead of accuracy?](#why-cross-entropy-instead-of-accuracy)
+- [Information-theoretic/compression lens](#information-theoreticcompression-lens)
 - [Formulation, notation](#formulation-notation)
 - [Direct RL as a Maximum Likelihood approximation](#direct-rl-as-a-maximum-likelihood-approximation)
+- [Binary reasoning setup](#binary-reasoning-setup)
+- [Continuous regression](#continuous-regression)
+- [Putting them together: Jensen and Taylor](#putting-them-together-jensen-and-taylor)
 - [Gradient estimators](#gradient-estimators)
-- [Full generalization](#full-generalization)
-- [Pseudo-code (with an abstraction barrier)](#pseudo-code-with-an-abstraction-barrier)
-- [Optional technical note: estimating $w_T$](#optional-technical-note-estimating-w_t)
+- [Binary case](#binary-case)
+- [Generalization](#generalization)
+- [Pseudocode: generalized MaxRL](#pseudocode-pytorch-style-generalized-maxrl)
 
 ## Preamble / ramble on MLE
 
@@ -70,7 +82,6 @@ So difficult cases (small $p_\theta$) get amplified by $1/p_\theta$.
 
 Maximizing log-likelihood equals minimizing expected code length under the model. In this lens, each example contributes $-\log p_\theta(y\mid x)$ nats of surprise. Hard examples are expensive in description length, so ML naturally spends gradient budget there.
 
----
 
 ## Formulation, notation
 
@@ -102,7 +113,7 @@ S(x,z) := \nabla_\theta \log m_\theta(z\mid x).
 $$
 
 This score vector is almost always **the only** intermediate through which policy parameters $\theta$ touch policy-gradient objectives. Most algorithms differ mainly in how they reweight or shift these score vectors.
-Unpacking / understanding the latent variable formulation there already goes 60% of the way torwards understanding this post; also note that this formulation subsumes supervised maximum-likelihood when sampling is trivial. 
+Unpacking / understanding the latent variable formulation there already goes 60% of the way towards understanding this post; also note that this formulation subsumes supervised maximum-likelihood when sampling is trivial. 
 
 ## Direct RL as a Maximum Likelihood approximation
 
@@ -136,7 +147,7 @@ This is *exactly* the paper's core distinction: RL maximizes $\mathbb E[p]$, ML 
 
 (Also: yes, $\log\mathbb E[\mathbf 1[\cdot]]$ is a little silly-looking, but that's kind of the point: **you're doing maximum likelihood on a Bernoulli observation whose success probability is induced by a non-differentiable latent generator**.)
 
-## Continuous regression
+### Continuous regression
 
 Specialize to a Gaussian noise model with $\sigma=1$: 
 $$
@@ -173,7 +184,7 @@ $$
 p := p_\theta(y\mid x)=\mathbb E_{z\sim m_\theta(\cdot\mid x)} l(y,z).
 $$
 
-For $p\in(0,1]$, taylor expanding about $p=1$ yields 
+For $p\in(0,1]$, Taylor-expanding about $p=1$ yields 
 $$
 \log p
 =
@@ -188,8 +199,8 @@ J_T(p)
 -\sum_{k=1}^T \frac{(1-p)^k}{k}.
 $$
 
-- $T=1$: $J_1(p)=-(1-p)=p-1$, i.e. RL / pass-rate training up to an additive constant.
-- $T\to\infty$: $J_T(p)\to\log p$, i.e. exact maximum likelihood.
+- $T=1$: $J_1(p)=-(1-p)=p-1$, that is RL / pass-rate training up to an additive constant.
+- $T\to\infty$: $J_T(p)\to\log p$, that is exact maximum likelihood.
 
 Differentiating: 
 $$
@@ -224,26 +235,24 @@ At this point you can already read off the two qualitative behaviors:
 
 **Remark 2 (across prompts):** the scalar multiplier $w_T(p)$ increases when $p$ is small (hard prompts). In the ML limit $T\to\infty$, $w_T(p)=1/p$ reproduces the inverse-pass-rate reweighting.
 
----
-
 ## Gradient estimators
 
 Here, you say: "all's great! There's this beautiful theory and a highly principled objective. How are we going about optimizing it?"
 
 The MaxRL paper works out an unbiased estimator in the binary setting, and (crucially) shows it is unbiased for a **truncated** objective whose order matches your rollout compute.
 
-Below: (i) recap the binary case, then (ii) give a clean generalization that operates at the level of the per-rollout likelihood $l(y,z)$.
+Below: first recap the binary case, then give a clean generalization that operates at the level of the per-rollout likelihood $l(y,z)$.
 
 ### Binary case
 
 In the binary setting $l(y,z)\in\{0,1\}$, draw $N$ trajectories $z_1,\dots,z_N\sim m_\theta(\cdot\mid x)$, define
 $$
-S_i:=\nabla_\theta\log m_\theta(z_i\mid x),\qquad K:=\sum_{i=1}^N l_i.
+l_j:=l(y,z_j),\qquad S_j:=\nabla_\theta\log m_\theta(z_j\mid x),\qquad K:=\sum_{j=1}^N l_j.
 $$
 
 - **REINFORCE** (pass@1) uses
 $$
-\hat g_{\mathrm{RL}}=\frac{1}{N}\sum_{i=1}^N l_i S_i,
+\hat g_{\mathrm{RL}}=\frac{1}{N}\sum_{j=1}^N l_j S_j,
 $$
 which is unbiased for $\nabla_\theta\,\mathrm{pass@}1(x)$.
 
@@ -252,7 +261,7 @@ $$
 \hat g_N^{\mathrm{bin}}(x)
 :=
 \begin{cases}
-\frac{1}{K}\sum_{i=1}^N l_i S_i, & K\ge 1,\\
+\frac{1}{K}\sum_{j=1}^N l_j S_j, & K\ge 1,\\
 0, & K=0.
 \end{cases}
 $$
@@ -261,101 +270,107 @@ Conditioning on $K\geq 1$, note that
 $$
 \mathbb E_z\big[\hat g_N^{\mathrm{bin}}(x)\mid K\geq 1\big] = \mathbb E_z[S\mid l=1] = \dfrac{\mathbb E[l\cdot S]}{\mathbb E[l]} = \dfrac{\nabla p}{p} = \nabla \log p
 $$
-It's an unbiased ML estimator, conditioning on $K\geq 1$!! The bias comes from $K=0$ which happens with probability $(1-p)^N$. Substituting yields 
+It's an unbiased ML estimator, conditioning on $K\geq 1$!! The bias comes from $K=0$ which happens with probability $(1-p)^N$. Substituting shows that this exactly equals the $T$-order truncated objective. 
 $$
 \mathbb E_z\big[\hat g_N^{\mathrm{bin}}(x)\big] = (1-(1-p)^N) \nabla \log p = w_T(p)\cdot \nabla p = \nabla J_T(p)
 $$
-
----
-
 ## Generalization
 
 Now we drop the assumption $l\in\{0,1\}$ and keep only what the derivation above *actually used*:
 
-- $l_i := l(y,z_i)\in[0,1]$ is a per-rollout likelihood/reward signal,
+- $l_j := l(y,z_j)\in[0,1]$ is a per-rollout likelihood/reward signal,
 - $p = \mathbb E[l]$,
 - $\nabla_\theta p = \mathbb E[lS]$,
 - $\nabla_\theta J_T = w_T(p)\,\nabla_\theta p$.
 
-The obstacle is subtle but standard:
+We want to **estimate the last quantity using $N$ iid rollout samples**. The obstacle is subtle but standard:
 
 - You can estimate $p$ and $\nabla_\theta p$ unbiasedly from samples.
 - But $w_T(p)\nabla_\theta p$ is a **product** of unknowns.
 - Plugging in sample estimates makes bias because the factors are correlated.
 
-### The leave-one-out (LOO) factorization trick
+The key here is the **leave-one-out** trick. Use one sample to estimate $\nabla_\theta p$, the remaining $N-1$ samples to estimate $w_T(p)$, and average over all leave-one-outs. The product factorizes because samples are conditionally independent. 
 
-Draw $N$ rollouts $z_1,\dots,z_N$. For each rollout $i$, we will:
-
-- use rollout $i$ alone to estimate $\nabla_\theta p$ via $l_i S_i$,
-- use the other $N-1$ rollouts to estimate $w_T(p)$.
-
-Formally, define
+Formally, **suppose we have an estimator subroutine $\omega_j$**, built from $\{l_k\}_{k\ne j}$ only, such that
 $$
-\widehat{\nabla_\theta p}^{(i)} := l_i S_i
-\quad\text{(unbiased for }\mathbb E[lS]\text{)},
+\mathbb E[\omega_j] = w_T(p).
 $$
-and let $\hat w_{-i}$ be any estimator (built from $\{l_j\}_{j\ne i}$ only) such that
+We know that $l_j S_j$ is an unbiased estimator for $\nabla p = \mathbb E[l\cdot S]$, 
+then the leave-one-out product $\omega_j l_j \cdot S_j$ is unbiased for $w_T(p)\nabla_\theta p$. Averaging over $j$ gives the final estimator:
 $$
-\mathbb E[\hat w_{-i}] = w_T(p).
-$$
-
-Then the LOO product $\hat w_{-i}\,\widehat{\nabla_\theta p}^{(i)}=\hat w_{-i}\,l_i S_i$ is unbiased for $w_T(p)\nabla_\theta p$ because $\hat w_{-i}$ is independent of $z_i$ (conditional on $(x,y)$).
-
-Averaging over $i$ gives the final estimator:
-$$
-\hat g_T^{\mathrm{gen}}(x,y)
+\hat g_T(x,y)
 :=
-\frac{1}{N}\sum_{i=1}^N \omega_i\,l_i\,S_i,
-\qquad
-\omega_i := \hat w_{-i}.
+\frac{1}{N}\sum_{j=1}^N \omega_j\,l_j\,S_j.
 $$
-This is the "particularly neat expression": again a weighted average of score vectors, but now with a continuous $l_i$ and a LOO weight $\omega_i$.
+In addition, this is a particularly neat expression because it is, again, a simple reweighted average of the rollout scores! To reduce variance, we can subtract any constant baseline (since $\mathbb E[S]=0$). A simple choice is $1/N$:
+$$
+\hat g_T(x,y)
+:=
+\frac{1}{N}\sum_{j=1}^N \left(\omega_j\,l_j - \dfrac 1 N\right)\,S_j.
+$$
 
-All that remains is: **how do we get an unbiased $\hat w_{-i}$ for $w_T(p)=\sum_{k=0}^{T-1}(1-p)^k$?**
+> It remains to solve the problem: given iid samples $(l_0, \dots, l_{N-1})$, estimate 
+> $$w_T(p) = \sum_{k=0}^{T-1}(1-p)^k.$$
+> Taking $T=N$, it suffices to obtain estimators for $(1-p)^k$ for all $1\leq k\leq N-1$. Fortunately, it turns out that this is a textbook problem with a known MVUE (Minimal Variance Unbiased Estimator) using U-statistics (something something elementary symmetric polynomials, you're welcome to look it up -- drop a comment!). 
 
----
-
-## Pseudocode: generalized MaxRL for supervised likelihoods
-
-I'll package **weight estimation** as a subroutine, as requested.
+## Pseudocode: generalized MaxRL
 
 ```python
-# Generalized MaxRL (truncated ML) for latent-generation likelihoods
+# Generalized truncated Maximum likelihood RL for latent-generation likelihoods
 #
 # Inputs:
 #   - model m_theta(z | x)
 #   - per-rollout likelihood l(y, z) in [0, 1]   (can be scaled)
 #   - truncation order T
-#   - number of rollouts N  (must satisfy T <= N)
+#   - number of rollouts N >= T (T=1 corresponds to REINFORCE)
 
-def grad_step(batch):
+
+def Estimate_wT(l_loo, T):
+    """
+    Args:
+        l_loo: 1D tensor of length N-1 with values in [0,1], detached;
+              all samples from the same (x,y). loo for leave-one-out. 
+        T: truncation order.
+
+    Returns:
+        Scalar unbiased estimate of w_T(p) = sum_{k=0}^{T-1}(1-p)^k.
+    """
+    ...
+    return w_hat
+
+
+def maxrl_step(batch, model, optimizer, T, N):
     # batch: list of (x, y) samples
-    total_grad = 0.0
+    optimizer.zero_grad()
+    total_loss = 0.0
 
     for (x, y) in batch:
-        # 1) sample rollouts
-        z = [sample_from_model(m_theta, x) for _ in range(N)]
+        # 1) sample rollouts and log-probabilities
+        z_j, logp_j = model.sample_with_logprob(x, N)  # logp_j: [N]
 
-        # 2) compute per-rollout likelihoods and score vectors
-        lvals = [likelihood_l(y, zi) for zi in z]                # l_i
-        Svals = [grad_logprob(m_theta, zi, x) for zi in z]       # S_i = grad_theta log m_theta(zi|x)
+        # 2) per-rollout likelihoods (no grad)
+        with torch.no_grad():
+            l_j = likelihood_l(y, z_j).detach()  # [N], in [0,1]
 
-        # 3) leave-one-out weights + accumulate weighted score average
-        g = 0.0
-        for i in range(N):
-            l_loo = [lvals[j] for j in range(N) if j != i]       # N-1 samples
-            omega_i = Estimate_wT(l_loo, T)                      # unbiased for w_T(p)
-            g += omega_i * lvals[i] * Svals[i]
+        # 3) leave-one-out weights
+        omega_j = []
+        for j in range(N):
+            l_loo = torch.cat([l_j[:j], l_j[j+1:]]).detach()
+            omega_j.append(Estimate_wT(l_loo, T))
+        omega_j = torch.stack(omega_j)  # [N]
 
-        g /= N
-        total_grad += g
+        # 4) constant baseline + equivalent-loss (one backward pass)
+        with torch.no_grad():
+            w_j = omega_j * l_j
+            b = 1.0 / N
+            adv_j = w_j - b
 
-    total_grad /= len(batch)
-    apply_update(theta, total_grad)
+        # Equivalent loss: gradient is (adv_j * grad logp_j)
+        loss_x = -(adv_j.detach() * logp_j).mean()
+        total_loss = total_loss + loss_x
+
+    total_loss = total_loss / len(batch)
+    total_loss.backward()
+    optimizer.step()
 ```
 
-The only "magic" is `Estimate_wT`, which returns an unbiased estimate of
-$$
-w_T(p)=\sum_{k=0}^{T-1}(1-p)^k.
-$$
