@@ -233,9 +233,7 @@ At this point we can already read off the two qualitative behaviors:
 
 Here, you say: "all's great! There's this beautiful theory and a highly principled objective. How are we going about optimizing it?"
 
-The MaxRL paper works out an unbiased estimator in the binary setting, and (crucially) shows it is unbiased for a **truncated** objective whose order matches your rollout compute.
-
-Below: first recap the binary case, then give a clean generalization that operates at the level of the per-rollout likelihood $l(y,z)$.
+The MaxRL paper proposes an unbiased estimator for the truncated maximum-likelihood binary objective. Here, we recap the proof and propose a clean generalization that operates at the level of per-rollout likelihood $l(y,z)$. It correctly specializes to the binary construction while accommodating general likelihood-based objectives such as Gaussian regression.
 
 ### Binary case
 
