@@ -1,5 +1,5 @@
 ---
-title: "per-rollout likelihood generalization of maximum likelihood reinforcement learning"
+title: "Rollout likelihood generalization of maximum likelihood reinforcement learning"
 date: 2026-02-16
 summary: "A highly principled foundational RL paper with easily actionable changes. We derive the continuous generalization."
 ---
