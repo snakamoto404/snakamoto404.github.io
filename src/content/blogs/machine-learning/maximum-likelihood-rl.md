@@ -134,7 +134,7 @@ J_{\mathrm{ML}}
 $$
 This is *exactly* the paper's core distinction: RL maximizes $\mathbb E[p]$, ML maximizes $\mathbb E[\log p]$.
 
-(Also: yes, $\log\mathbb E[\mathbf 1[\cdot]]$ is a little silly-looking, but that's kind of the point: **you're doing maximum likelihood on a Bernoulli observation whose success probability is induced by a non-differentiable latent generator**.)
+(Also: yes, $\log\mathbb E[\mathbf 1[\cdot]]$ is a little silly-looking, but that's *kind of the point*: we're doing maximum likelihood on a Bernoulli observation whose success probability is induced by a non-differentiable latent generator.)
 
 ### Continuous regression
 
@@ -155,14 +155,19 @@ J(\theta)
 +\text{const}. 
 $$
 
-The "direct RL analogue" of pass-rate training is *not* MSE; it is expected *likelihood*:
+An intuitive per-rollout reward is negative MSE:
 $$
-J_{\mathrm{direct}}
-=
-\mathbb E_{(x,y)\sim\rho}
-\,\mathbb E_{z\sim m_\theta(\cdot\mid x)}\,l(y,z).
+r(y,z):=-\frac{(y-\hat y(z))^2}{2}.
 $$
-This is the clean regression analogue of maximizing expected accuracy $\mathbb E[p]$ instead of log-likelihood $\mathbb E[\log p]$.
+A direct analogue would average these rollout rewards:
+$$
+\mathbb E_{(x,y)\sim\rho}\,\mathbb E_{z\sim m_\theta(\cdot\mid x)}\,r(y,z).
+$$
+Maximum likelihood instead optimizes
+$$
+\mathbb E_{(x,y)\sim\rho}\,\log\mathbb E_{z\sim m_\theta(\cdot\mid x)}\,\exp(r(y,z))
+$$
+(up to constants): a log-sum-exp, rather than a simple average, over per-rollout MSE-derived terms. So within each sample, the objective reinforces the most successful trajectories; we'll recover this same structure later in the general form.
 
 (If you want this to literally satisfy $l\in(0,1]$ so the Maclaurin series below is automatic, just pick a scale so the peak density is $\le 1$; multiplying $l$ by a $\theta$-independent constant only adds a constant to $\log p_\theta$, hence doesn't change the ML gradient.)
 
@@ -215,7 +220,7 @@ $$
  w_T(p)\,\mathbb E_{z\sim m_\theta(\cdot\mid x)}\big[l(y,z)\,S(x,z)\big].
 $$
 
-At this point you can already read off the two qualitative behaviors:
+At this point we can already read off the two qualitative behaviors:
 
 **Remark 1 (per-prompt):** inside $\mathbb E[lS]$, trajectories with larger likelihood $l(y,z)$ get more weight.
 
@@ -274,7 +279,7 @@ Now we drop the assumption $l\in\{0,1\}$ and keep only what the derivation above
 
 We want to **estimate the last quantity using $N$ iid rollout samples**. The obstacle is subtle but standard:
 
-- You can estimate $p$ and $\nabla_\theta p$ unbiasedly from samples.
+- We can estimate $p$ and $\nabla_\theta p$ unbiasedly from samples.
 - But $w_T(p)\nabla_\theta p$ is a **product** of unknowns.
 - Plugging in sample estimates makes bias because the factors are correlated.
 
