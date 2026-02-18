@@ -30,7 +30,7 @@ whose gradient upweights low-pass-rate inputs by a factor $1/p_\theta(x)$.
 ### What's new here 
 Luckily (for us), the authors focus on the binary, discrete-reward setting. This post unpacks the following qualitative behavior of MaxRL:
 
-- is *sharper* than (and lower-bounded by) direct objectives, admitting a natural bounded truncation that interpolates RL -> ML with rollout budget,
+- is *sharper* than direct objectives, admitting a natural bounded truncation that interpolates RL -> ML with rollout budget,
 - fixing a prompt/sample, **upweights the most successful rollouts** (soft-max / log-sum-exp behavior),
 - marginalizing over rollouts, **upweights the most difficult prompts** via inverse-probability reweighting.
 
@@ -41,7 +41,6 @@ We also put forward a generalization that abstracts at the level of per-rollout 
 ## Contents
 
 - [Preamble / ramble on MLE](#preamble--ramble-on-mle)
-  - [Information-theoretic/compression lens](#information-theoreticcompression-lens)
 - [Formulation, notation](#formulation-notation)
 - [Direct RL as a Maximum Likelihood approximation](#direct-rl-as-a-maximum-likelihood-approximation)
   - [Binary reasoning setup](#binary-reasoning-setup)
@@ -49,7 +48,7 @@ We also put forward a generalization that abstracts at the level of per-rollout 
   - [Putting them together: Jensen and Taylor](#putting-them-together-jensen-and-taylor)
 - [Gradient estimators](#gradient-estimators)
   - [Binary case](#binary-case)
-- [Generalization](#generalization)
+  - [Generalization](#generalization)
 - [Pseudocode: generalized MaxRL](#pseudocode-generalized-maxrl)
 
 ## Preamble / ramble on MLE
@@ -70,11 +69,7 @@ So difficult cases (small $p_\theta$) get amplified by $1/p_\theta$.
 
 > Maximum likelihood upweights difficult samples aggressively, updating the model on the frontier of its understanding.
 
-*Addendum:* I would not over-interpret this as the *principle* itself. It's a side-effect interpretation. The principle is still MLE.
-
-### Information-theoretic/compression lens
-
-Maximizing log-likelihood equals minimizing expected code length under the model. In this lens, each example contributes $-\log p_\theta(y\mid x)$ nats of surprise. Hard examples are expensive in description length, so ML naturally spends gradient budget there.
+*Addendum:* I would not over-interpret this as the *principle* itself. It's a side-effect interpretation. The principle is still MLE. For example, from an info-theory perspective, maximizing log-likelihood equals minimizing expected code length under the model. In this lens, each example contributes $-\log p_\theta(y\mid x)$ nats of surprise. Hard examples are expensive in description length, so ML naturally spends gradient budget there.
 
 
 ## Formulation, notation
@@ -268,7 +263,7 @@ It's an unbiased ML estimator, conditioning on $K\geq 1$!! The bias comes from $
 $$
 \mathbb E_z\big[\hat g_N^{\mathrm{bin}}(x)\big] = (1-(1-p)^N) \nabla \log p = w_T(p)\cdot \nabla p = \nabla J_T(p)
 $$
-## Generalization
+### Generalization
 
 Now we drop the assumption $l\in\{0,1\}$ and keep only what the derivation above *actually used*:
 
