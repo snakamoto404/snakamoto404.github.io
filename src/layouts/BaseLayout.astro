@@ -4,12 +4,25 @@ import '../styles/global.css';
 interface Props {
   title: string;
   description?: string;
+  ogType?: 'website' | 'article';
+  ogImage?: string;
+  twitterCard?: 'summary' | 'summary_large_image';
+  structuredData?: Record<string, unknown> | Array<Record<string, unknown>>;
 }
 
-const { title, description = 'Daily feed archive by Romulus' } = Astro.props;
+const {
+  title,
+  description = 'Daily feed archive by Romulus',
+  ogType = 'website',
+  ogImage,
+  twitterCard = 'summary_large_image',
+  structuredData
+} = Astro.props;
 
 const pathname = Astro.url.pathname;
 const canonicalUrl = Astro.site ? new URL(pathname, Astro.site).toString() : Astro.url.toString();
+const absoluteOgImage = ogImage ? (Astro.site ? new URL(ogImage, Astro.site).toString() : ogImage) : undefined;
+const siteName = 'Romulus';
 
 const navItems = [
   { href: '/', label: 'Home' },
@@ -34,6 +47,27 @@ const isActivePath = (href: string) => {
     <meta name="description" content={description} />
     <meta name="robots" content="index,follow" />
     <link rel="canonical" href={canonicalUrl} />
+
+    <meta property="og:type" content={ogType} />
+    <meta property="og:title" content={title} />
+    <meta property="og:description" content={description} />
+    <meta property="og:url" content={canonicalUrl} />
+    <meta property="og:site_name" content={siteName} />
+    {absoluteOgImage && <meta property="og:image" content={absoluteOgImage} />}
+
+    <meta name="twitter:card" content={absoluteOgImage ? twitterCard : 'summary'} />
+    <meta name="twitter:title" content={title} />
+    <meta name="twitter:description" content={description} />
+    {absoluteOgImage && <meta name="twitter:image" content={absoluteOgImage} />}
+
+    {
+      structuredData
+        ? Array.isArray(structuredData)
+          ? structuredData.map((entry) => <script type="application/ld+json" set:html={JSON.stringify(entry)} />)
+          : <script type="application/ld+json" set:html={JSON.stringify(structuredData)} />
+        : null
+    }
+
     <title>{title}</title>
   </head>
   <body>

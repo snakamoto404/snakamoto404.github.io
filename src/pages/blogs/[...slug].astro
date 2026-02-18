@@ -21,6 +21,25 @@ const { entry } = Astro.props;
 const { Content } = await entry.render();
 const toIsoDate = (value: Date) => value.toISOString().slice(0, 10);
 const isoDate = toIsoDate(entry.data.date);
+const blogUrl = Astro.site ? new URL(`/blogs/${entry.slug}/`, Astro.site).toString() : Astro.url.toString();
+const structuredData = {
+  '@context': 'https://schema.org',
+  '@type': 'BlogPosting',
+  headline: entry.data.title,
+  description: entry.data.summary,
+  datePublished: isoDate,
+  dateModified: isoDate,
+  url: blogUrl,
+  mainEntityOfPage: blogUrl,
+  author: {
+    '@type': 'Person',
+    name: 'Romulus'
+  },
+  publisher: {
+    '@type': 'Person',
+    name: 'Romulus'
+  }
+};
 const topic = entry.slug.split('/')[0] ?? 'general';
 const topicLabel = topic
   .split('-')
@@ -28,7 +47,12 @@ const topicLabel = topic
   .join(' ');
 ---
 
-<BaseLayout title={`${entry.data.title} | Blogs`} description={entry.data.summary}>
+<BaseLayout
+  title={`${entry.data.title} | Blogs`}
+  description={entry.data.summary}
+  ogType="article"
+  structuredData={structuredData}
+>
   <article class="panel space-y-5">
     <p class="text-sm">
       <a href="/blogs/" class="font-medium">Back to blogs</a>

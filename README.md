@@ -2,6 +2,8 @@
 
 Astro static site scaffolded for GitHub Pages user-site hosting.
 
+Live site: https://snakamoto404.github.io/
+
 ## Features
 
 - Home page at `/`

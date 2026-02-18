@@ -11,9 +11,21 @@ const latest = [...entries]
 const latestBlogs = [...blogEntries]
   .sort((a, b) => b.data.date.getTime() - a.data.date.getTime())
   .slice(0, 5);
+
+const homeDescription =
+  'Romulus by Nakamoto Satoshi: research feed archive and blogs on agentic programming, machine learning, and quantitative systems.';
+
+const websiteStructuredData = {
+  '@context': 'https://schema.org',
+  '@type': 'WebSite',
+  name: 'Romulus',
+  alternateName: ['snakamoto404', 'Nakamoto Satoshi'],
+  url: Astro.site ? Astro.site.toString() : Astro.url.origin,
+  description: homeDescription
+};
 ---
 
-<BaseLayout title="Home | Romulus">
+<BaseLayout title="Home | Romulus" description={homeDescription} structuredData={websiteStructuredData}>
   <section class="space-y-6">
     <div class="space-y-2">
       <h1 class="text-3xl font-semibold tracking-tight">Romulus</h1>
