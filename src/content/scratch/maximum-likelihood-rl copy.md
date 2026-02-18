@@ -25,7 +25,7 @@ whose gradient upweights low-pass-rate inputs by a factor $1/p_\theta(x)$.
 
 - A **compute-indexed** family of truncated objectives interpolating between RL and ML,
 - A **simple unbiased estimator** whose expected gradient matches the truncated objective,
-- Experiments demonstrating strong Pareto improvements over common baselines (e.g. GRPO/RLOO) including up to **(~20x)** test-time scaling efficiency gains in their reasoning setups.
+- Experiments demonstrating strong Pareto improvements over common baselines (e.g. GRPO/RLOO) including up to **(~20x)** rollout scaling efficiency gains in their reasoning setups.
 
 ### What's new here 
 Luckily (for us), the authors focus on the binary, discrete-reward setting. This post unpacks the following qualitative behavior of MaxRL 
@@ -42,121 +42,67 @@ we also put forward a generalization that abstracts at the level of per-rollout 
 - [Formulation, notation](#formulation-notation)
 - [Direct RL as a Maximum Likelihood approximation](#direct-rl-as-a-maximum-likelihood-approximation)
 - [Gradient estimators](#gradient-estimators)
-- [Generalization](#generalization)
-- [Pseudocode: generalized MaxRL for supervised likelihoods](#pseudocode-generalized-maxrl-for-supervised-likelihoods)
-- [Technical note: estimating $w_T(p)$ via U-statistics](#technical-note-estimating-w_tp-via-u-statistics)
-
----
+- [Full generalization](#full-generalization)
+- [Pseudo-code (with an abstraction barrier)](#pseudo-code-with-an-abstraction-barrier)
+- [Optional technical note: estimating $w_T$](#optional-technical-note-estimating-w_t)
 
 ## Preamble / ramble on MLE
 
-Maximum likelihood estimation (MLE) is a ~axiomatic, philosophical principle. It says: given finite data $x\sim \rho$ and a parametric family $p_\theta$ of distributions, pick $\theta$ which maximizes the likelihood of the observed data under our model.
+Maximum likelihood estimation (MLE) is a near-axiomatic principle: given data and a parametric family, choose parameters that maximize the probability (likelihood) of observed data.
 
-- **Classification is MLE:** assume $(x,y)\sim\rho$ and model $p_\theta(y\mid x)$; maximize $\mathbb E \log p_\theta(y\mid x)$.
-- **Regression is MLE:** MSE is MLE under a Gaussian noise model; L1 is MLE under Laplacian noise (detour omitted).
-- **VAE is MLE-ish:** maximize $\log p_\theta(x)=\log\int p_\theta(x\mid z)p(z)\,dz$ via an ELBO surrogate.
+- Classification is MLE: data-label pairs $(x, y) \sim \rho$, model $p_\theta(y \mid x)$.
+- Regression is MLE: MSE corresponds to Gaussian noise MLE; L1 corresponds to Laplace noise MLE.
+- VAEs are MLE-ish too: maximize a tractable lower bound on log-likelihood, while tightening that lower bound.
 
-Given the ubiquity of MLE, it's surprising that **Maximum-likelihood RL** didn't become a standard framing sooner. The MaxRL paper's key move is basically: *in correctness-based RL, you already have an implicit likelihood $p_\theta(x)$; why are you optimizing the wrong functional of it?*
+Given the ubiquity of MLE, it's surprising that Maximum-likelihood RL (MaxRL) is this recent.
 
-### Why cross-entropy instead of accuracy?
-
-Let $y\in\{0,1\}$. Suppose the model produces a Bernoulli probability $p=p_\theta(x)$ for $y=1$. If you "RL-train" on expected accuracy (sampling the predicted label), the per-example objective is
+Why do we supervise with cross-entropy $\mathbb E \log p_\theta(y\mid x)$ rather than accuracy-like $\mathbb E\,p_\theta(y\mid x)$? One mechanistic lens is the gradient:
 $$
-J_{\mathrm{acc}}(p;y)=y\,p + (1-y)(1-p).
+\nabla_\theta \log p_\theta(y\mid x) = \frac{1}{p_\theta(y\mid x)}\,\nabla_\theta p_\theta(y\mid x).
 $$
-Its derivative w.r.t. $p$ is just
-$$
-\frac{\partial}{\partial p}J_{\mathrm{acc}}(p;y)=2y-1,
-$$
-i.e. a constant sign. The only "difficulty sensitivity" comes indirectly through how $\nabla_\theta p_\theta(x)$ behaves (e.g. sigmoid saturation).
-
-In contrast, log-likelihood (cross-entropy) is
-$$
-J_{\mathrm{ML}}(p;y)=y\log p + (1-y)\log(1-p),
-$$
-with derivative
-$$
-\frac{\partial}{\partial p}J_{\mathrm{ML}}(p;y)=\frac{y}{p}-\frac{1-y}{1-p}.
-$$
-So when the model is confidently wrong (say $y=1$ but $p\ll 1$), you get a $\sim 1/p$ blow-up: **MLE leans into hard / low-probability samples**.
-
-This is exactly the same algebra the MaxRL paper highlights at the *prompt level*:
-$$
-\nabla_\theta J_{\mathrm{RL}}=\mathbb E_x[\nabla_\theta p_\theta(x)],
-\qquad
-\nabla_\theta J_{\mathrm{ML}}=\mathbb E_x\!\left[\frac{1}{p_\theta(x)}\nabla_\theta p_\theta(x)\right],
-$$
-so low-pass-rate prompts get upweighted by $1/p_\theta(x)$.
+So difficult cases (small $p_\theta$) get amplified by $1/p_\theta$.
 
 > Maximum likelihood upweights difficult samples aggressively, updating the model on the frontier of its understanding.
 
-*Addendum:* I wouldn't read into this too much except as a side-effect interpretation. The MLE principle itself is more foundational than "hard example mining," which can be done in many non-canonical ways. But it's a useful mental model for why MaxRL behaves qualitatively differently from pass@1 RL.
+*Addendum:* I would not over-interpret this as the *principle* itself. It's a side-effect interpretation. The principle is still MLE.
 
-<details>
-<summary><b>Information theory / compression perspective</b></summary>
+### Information-theoretic/compression lens
 
-There's a clean story here that (to me) is the only *fully satisfying* intuition for MLE:
-
-- $-\log p_\theta(\text{data})$ is the *code length* (in nats) of the data under the code induced by $p_\theta$.
-- Minimizing expected NLL is minimizing cross-entropy $H(\rho,p_\theta)$, i.e. expected codelength under your model.
-- $H(\rho,p_\theta)=H(\rho)+\mathrm{KL}(\rho\Vert p_\theta)$, so MLE pushes you toward the data distribution in the strongest possible sense (KL).
-
-In latent-variable settings, $\log \mathbb E_{z\sim m_\theta}[l(y,z)]$ is literally a marginal log-likelihood, i.e. "how well does the model's induced mixture distribution assign mass/density to the truth?" This is why the log *outside* the rollout expectation is the canonical place for it: it's the same structure as $\log\int p_\theta(y\mid z)p_\theta(z)\,dz$.
-
-</details>
+Maximizing log-likelihood equals minimizing expected code length under the model. In this lens, each example contributes $-\log p_\theta(y\mid x)$ nats of surprise. Hard examples are expensive in description length, so ML naturally spends gradient budget there.
 
 ---
 
 ## Formulation, notation
 
-Let's start with the typical LLM-RL setting with a binary verifier:
+Let's start in the standard LLM-RL latent-generation setting.
 
-- We have a dataset of math problems $(x, y)\sim \rho$ together with answers $y$.
-- We also have a sequence model $m_\theta(\cdot \mid x)$. We can sample rollouts $z\sim m_\theta(\cdot \mid x)$ and differentiably evaluate the probability $m_\theta(z\mid x)$.
-  - The sampling process is non-differentiable; this is why we use RL in the first place.
-- Given a rollout (e.g. chain-of-thought), we parse it to obtain a candidate answer $\hat y(z)$; we check equivalence $\mathbf 1[\hat y(z)=y]$.
-- Typically, we maximize the objective
-$$
-J_{\mathrm{RL}}
-=
-\mathbb E_{(x, y)\sim \rho}
-\,\mathbb E_{z\sim m_\theta(\cdot \mid x)}
-\,\mathbf 1[\hat y(z)=y].
-$$
-- Fixing $(x,y)$, we can evaluate the rollout infinitely many times to estimate the *pass rate*
-$$
-p_\theta(y\mid x)
-=
-\mathbb E_{z\sim m_\theta(\cdot \mid x)}\mathbf 1[\hat y(z)=y].
-$$
-This is the implicit "likelihood of correctness" the paper talks about.
+- Data: $(x, y) \sim \rho$.
+- Policy/sequence model: $z \sim m_\theta(\cdot \mid x)$, where $z$ is a rollout.
+- Rollout evaluation: decode/postprocess $z$ into a prediction; compare to target $y$.
 
-Now the general definitions I'll use (this is the level where the continuous generalization becomes painless):
+In binary reasoning with verifier, the typical objective is
+$$
+J_{\mathrm{RL}} = \mathbb E_{(x,y)\sim\rho}\,\mathbb E_{z\sim m_\theta(\cdot\mid x)}\,\mathbf 1[\hat y(z)=y].
+$$
 
-- Dataset $(x,y)\sim\rho$, rollout $z\sim m_\theta(\cdot\mid x)$.
-- **More generally**, interpret the model rollout as describing a (possibly implicit) posterior $\hat y\sim \hat P(\cdot \mid z)$.
-  - Binary classification: $\hat P$ is a delta / indicator over the proposed answer.
-  - Gaussian regression: parse a point-estimate $\hat y(z)$ and set $\hat P(\cdot\mid z)=\mathcal N(\hat y(z),\sigma^2)$.
-  - Discretize-and-classify: bins give an explicit categorical $\hat P$.
-- Define the **per-rollout likelihood**
-$$
-l(y,z):=\hat P(y\mid z).
-$$
-- **Critical:** marginalize over rollouts to obtain the conditional likelihood
-$$
-p_\theta(y\mid x)
-=
-\mathbb E_{z\sim m_\theta(\cdot\mid x)}\,l(y,z).
-$$
-- Define the **score** (a.k.a. REINFORCE "log-derivative trick" vector)
-$$
-S(x,z):=\nabla_\theta \log m_\theta(z\mid x).
-$$
-This vector is almost always *the only* intermediate through which $\theta$ touches policy-gradient style objectives.
+So far this is standard RL setup. Now the useful abstraction.
 
-This formalism strictly subsumes supervised learning when the latent variable $z$ is trivial. For example: if $z$ is trivial, then $p_\theta(y\mid x)=l(y,z)$ and $J_{\mathrm{ML}}=\mathbb E\log p_\theta(y\mid x)$ is plain supervised MLE. Or, take $z\in\mathcal Y$ sampled from a classifier $m_\theta(z\mid x)=q_\theta(z\mid x)$ and let $l(y,z)=\mathbf 1[z=y]$; then $p_\theta(y\mid x)=q_\theta(y\mid x)$ and the score identity recovers the standard supervised gradient.
+- A rollout $z$ defines a predictive distribution $\hat P(\cdot\mid z)$ over labels/targets.
+- Define per-rollout likelihood
+$$
+l(y,z) := \hat P(y\mid z).
+$$
+- Marginalize over rollouts:
+$$
+p_\theta(y\mid x) := \mathbb E_{z\sim m_\theta(\cdot\mid x)} l(y,z).
+$$
+- Score function:
+$$
+S(x,z) := \nabla_\theta \log m_\theta(z\mid x).
+$$
 
----
+This score vector is almost always **the only** intermediate through which policy parameters $\theta$ touch policy-gradient objectives. Most algorithms differ mainly in how they reweight or shift these score vectors.
+Unpacking / understanding the latent variable formulation there already goes 60% of the way torwards understanding this post; also note that this formulation subsumes supervised maximum-likelihood when sampling is trivial. 
 
 ## Direct RL as a Maximum Likelihood approximation
 
@@ -190,14 +136,14 @@ This is *exactly* the paper's core distinction: RL maximizes $\mathbb E[p]$, ML 
 
 (Also: yes, $\log\mathbb E[\mathbf 1[\cdot]]$ is a little silly-looking, but that's kind of the point: **you're doing maximum likelihood on a Bernoulli observation whose success probability is induced by a non-differentiable latent generator**.)
 
-### Continuous regression
+## Continuous regression
 
-Specialize to a Gaussian noise model:
+Specialize to a Gaussian noise model with $\sigma=1$: 
 $$
-l(y,z)=\hat P(y\mid z)=\mathcal N(\hat y(z),\sigma^2)(y)
+l(y,z)=\hat P(y\mid z)=\mathcal N(\hat y(z))(y)
 =
-\frac{1}{\sqrt{2\pi\sigma^2}}
-\exp\left[-\frac{(y-\hat y(z))^2}{2\sigma^2}\right].
+\frac{1}{\sqrt{2\pi}}
+\exp\left[-\frac{(y-\hat y(z))^2}{2}\right].
 $$
 Then
 $$
@@ -205,15 +151,11 @@ J(\theta)
 =
 \mathbb E_{(x,y)\sim\rho}
 \,\log\mathbb E_{z\sim m_\theta(\cdot\mid x)}
-\left[\exp\left(-\frac{(y-\hat y(z))^2}{2\sigma^2}\right)\right]
-+\text{const}(\sigma).
+\left[\exp\left(-\frac{(y-\hat y(z))^2}{2}\right)\right]
++\text{const}. 
 $$
 
-Two quick remarks:
-
-1. **This is a log-sum-exp / soft-min over squared error across rollouts.** Fix $(x,y)$. The inner term is $\log\mathbb E_z[\exp(-\mathrm{MSE}(z)/(2\sigma^2))]$, which is the classic "soft" best-of-$K$ operator: it concentrates mass on the rollouts with smallest error.
-
-2. The "direct RL analogue" of pass-rate training is *not* MSE; it is expected *likelihood*:
+The "direct RL analogue" of pass-rate training is *not* MSE; it is expected *likelihood*:
 $$
 J_{\mathrm{direct}}
 =
@@ -231,19 +173,13 @@ $$
 p := p_\theta(y\mid x)=\mathbb E_{z\sim m_\theta(\cdot\mid x)} l(y,z).
 $$
 
-#### Step 1: the "RL is a first-order approximation" statement
-
-For $p\in(0,1]$,
-$$
-\log p = \log(1-(1-p)).
-$$
-Let $q:=1-p$. Then using the Maclaurin series $\log(1-q)=-\sum_{k=1}^\infty q^k/k$ (valid for $|q|<1$, i.e. $p>0$),
+For $p\in(0,1]$, taylor expanding about $p=1$ yields 
 $$
 \log p
 =
 -\sum_{k=1}^\infty \frac{(1-p)^k}{k}.
 $$
-This is exactly the expansion in the MaxRL paper (they write it in terms of fail@$k$ events when $l$ is binary).
+Note that this expansion is about $p=1$ (success), so $p\to 0$ implies greater deviation between the first (direct) and full (maximum-likelihood) orders, another perspective on larger improvements for harder tasks. 
 
 Truncating to order $T$ gives the **compute-indexed MaxRL objective**
 $$
@@ -255,35 +191,15 @@ $$
 - $T=1$: $J_1(p)=-(1-p)=p-1$, i.e. RL / pass-rate training up to an additive constant.
 - $T\to\infty$: $J_T(p)\to\log p$, i.e. exact maximum likelihood.
 
-Also, since all omitted terms are nonnegative,
+Differentiating: 
 $$
-\log p \le J_T(p) \le J_1(p)=p-1.
-$$
-So $J_T$ is literally sandwiched between the true log-likelihood and the "direct" first-order surrogate.
-
-#### Step 2: explicitly differentiate, define the weight function $w_T$
-
-Differentiate $J_T$ w.r.t. $p$:
-$$
-\frac{d}{dp}J_T(p)
+\nabla_\theta J_T(p_\theta)
 =
-\sum_{k=1}^T (1-p)^{k-1}
-=: w_T(p).
-$$
-So
-$$
-w_T(p)=\sum_{k=0}^{T-1}(1-p)^k
-=\frac{1-(1-p)^T}{p}
-\quad (p>0).
+\sum_{k=1}^T (1-p)^{k-1} \cdot \nabla p
+=: w_T(p)\cdot \nabla p, \quad w_T(p)=\sum_{k=0}^{T-1}(1-p)^k
+=\frac{1-(1-p)^T}{p}.
 $$
 As $T\to\infty$, $w_T(p)\to 1/p$, recovering ML's inverse-probability reweighting.
-
-#### Step 3: derive $\nabla_\theta J_T$ in terms of $l$ and $S$
-
-By the chain rule,
-$$
-\nabla_\theta J_T(p)= w_T(p)\,\nabla_\theta p.
-$$
 Now use the log-derivative trick on
 $$
 p=\mathbb E_{z\sim m_\theta}[l(y,z)]:
@@ -320,14 +236,14 @@ Below: (i) recap the binary case, then (ii) give a clean generalization that ope
 
 ### Binary case
 
-In the binary setting $l(y,z)=r(x,z)\in\{0,1\}$, draw $N$ trajectories $z_1,\dots,z_N\sim m_\theta(\cdot\mid x)$, define
+In the binary setting $l(y,z)\in\{0,1\}$, draw $N$ trajectories $z_1,\dots,z_N\sim m_\theta(\cdot\mid x)$, define
 $$
-r_i:=r(x,z_i),\qquad S_i:=\nabla_\theta\log m_\theta(z_i\mid x),\qquad K:=\sum_{i=1}^N r_i.
+S_i:=\nabla_\theta\log m_\theta(z_i\mid x),\qquad K:=\sum_{i=1}^N l_i.
 $$
 
 - **REINFORCE** (pass@1) uses
 $$
-\hat g_{\mathrm{RL}}=\frac{1}{N}\sum_{i=1}^N r_i S_i,
+\hat g_{\mathrm{RL}}=\frac{1}{N}\sum_{i=1}^N l_i S_i,
 $$
 which is unbiased for $\nabla_\theta\,\mathrm{pass@}1(x)$.
 
@@ -336,19 +252,19 @@ $$
 \hat g_N^{\mathrm{bin}}(x)
 :=
 \begin{cases}
-\frac{1}{K}\sum_{i=1}^N r_i S_i, & K\ge 1,\\
+\frac{1}{K}\sum_{i=1}^N l_i S_i, & K\ge 1,\\
 0, & K=0.
 \end{cases}
 $$
 
-It is **not** unbiased for the exact ML gradient $\nabla_\theta\log p$ at finite $N$ (because you output $0$ when there are no successes). Instead, it is unbiased for the MaxRL truncated gradient of order $T=N$.
-
-Intuitively: conditioning on $K\ge 1$, the successful samples are draws from the success-conditioned distribution, so $(1/K)\sum r_i S_i$ estimates $\mathbb E[S\mid \text{success}]$, which equals $\nabla_\theta \log p$. Then multiplying by $\mathbb P(K\ge 1)=\mathrm{pass@}N=1-(1-p)^N$ yields exactly the truncated weight $w_N(p)=\frac{1-(1-p)^N}{p}$.
-
-They also give a simple zero-mean control variate (unconditional average score) to reduce variance.
-
----
-
+Conditioning on $K\geq 1$, note that 
+$$
+\mathbb E_z\big[\hat g_N^{\mathrm{bin}}(x)\mid K\geq 1\big] = \mathbb E_z[S\mid l=1] = \dfrac{\mathbb E[l\cdot S]}{\mathbb E[l]} = \dfrac{\nabla p}{p} = \nabla \log p
+$$
+It's an unbiased ML estimator, conditioning on $K\geq 1$!! The bias comes from $K=0$ which happens with probability $(1-p)^N$. Substituting shows that this exactly equals the $T$-order truncated objective. 
+$$
+\mathbb E_z\big[\hat g_N^{\mathrm{bin}}(x)\big] = (1-(1-p)^N) \nabla \log p = w_T(p)\cdot \nabla p = \nabla J_T(p)
+$$
 ## Generalization
 
 Now we drop the assumption $l\in\{0,1\}$ and keep only what the derivation above *actually used*:
@@ -358,57 +274,50 @@ Now we drop the assumption $l\in\{0,1\}$ and keep only what the derivation above
 - $\nabla_\theta p = \mathbb E[lS]$,
 - $\nabla_\theta J_T = w_T(p)\,\nabla_\theta p$.
 
-The obstacle is subtle but standard:
+We want to **estimate the last quantity using $N$ i.i.d rollout samples**. The obstacle is subtle but standard:
 
 - You can estimate $p$ and $\nabla_\theta p$ unbiasedly from samples.
 - But $w_T(p)\nabla_\theta p$ is a **product** of unknowns.
 - Plugging in sample estimates makes bias because the factors are correlated.
 
-### The leave-one-out (LOO) factorization trick
+The key here is the **leave-one-out** trick. Use one sample to estimate $\nabla_\theta p$, the remaining $N-1$ samples to estimate $w_T(p)$, and average over all leave-one-outs. The product factorizes because samples are conditionally independent. 
 
-Draw $N$ rollouts $z_1,\dots,z_N$. For each rollout $i$, we will:
-
-- use rollout $i$ alone to estimate $\nabla_\theta p$ via $l_i S_i$,
-- use the other $N-1$ rollouts to estimate $w_T(p)$.
-
-Formally, define
+Formally, **suppose we have an estimator subroutine $\omega_j$**, built from $\{l_j\}_{j\ne i}$ only, such that
 $$
-\widehat{\nabla_\theta p}^{(i)} := l_i S_i
-\quad\text{(unbiased for }\mathbb E[lS]\text{)},
+\mathbb E[\omega_i ] = w_T(p).
 $$
-and let $\hat w_{-i}$ be any estimator (built from $\{l_j\}_{j\ne i}$ only) such that
+We know that $l_i S_i$ is an unbiased estimator for $\nabla p = \mathbb E[l\cdot S]$, 
+then the leave-one-out product $\omega_i l_i \cdot S_i$ is unbiased for $w_T(p)\nabla_\theta p$. Averaging over $i$ gives the final estimator:
 $$
-\mathbb E[\hat w_{-i}] = w_T(p).
-$$
-
-Then the LOO product $\hat w_{-i}\,\widehat{\nabla_\theta p}^{(i)}=\hat w_{-i}\,l_i S_i$ is unbiased for $w_T(p)\nabla_\theta p$ because $\hat w_{-i}$ is independent of $z_i$ (conditional on $(x,y)$).
-
-Averaging over $i$ gives the final estimator:
-$$
-\hat g_T^{\mathrm{gen}}(x,y)
+\hat g_T(x,y)
 :=
-\frac{1}{N}\sum_{i=1}^N \omega_i\,l_i\,S_i,
-\qquad
-\omega_i := \hat w_{-i}.
+\frac{1}{N}\sum_{i=1}^N \omega_i\,l_i\,S_i.
 $$
-This is the "particularly neat expression": again a weighted average of score vectors, but now with a continuous $l_i$ and a LOO weight $\omega_i$.
+In addition, this is a particularly neat expression because it is, again, a simple reweighted average of the rollout scores! To reduce variance, we can use the demeaning trick $\mathbb E[S] = 0$ to define 
+$$
+\hat g_T(x,y)
+:=
+\frac{1}{N}\sum_{i=1}^N \left(\omega_i\,l_i - \dfrac 1 N\right)\,S_i.
+$$
 
-All that remains is: **how do we get an unbiased $\hat w_{-i}$ for $w_T(p)=\sum_{k=0}^{T-1}(1-p)^k$?**
-
----
+> It remains to solve the problem: given i.i.d samples $(l_0, \dots, l_{N-1})$, estimate 
+> $$w_T(p) = \sum_{k=0}^{T-1}(1-p)^k.$$
+> Taking $T=N$, it suffices to obtain estimators for $(1-p)^k$ for all $1\leq k\leq N-1$. Fortunately, it turns out that this is a textbook problem with a known MVUE (Minimal Variance Unbiased Estimator) using U-statistics (something something elementary symmetric polynomials, you're welcome to look it up -- drop a comment!). 
 
 ## Pseudocode: generalized MaxRL for supervised likelihoods
 
 I'll package **weight estimation** as a subroutine, as requested.
 
 ```python
-# Generalized MaxRL (truncated ML) for latent-generation likelihoods
+# Generalized truncated Maximum likelihood RL for latent-generation likelihoods
 #
 # Inputs:
 #   - model m_theta(z | x)
 #   - per-rollout likelihood l(y, z) in [0, 1]   (can be scaled)
 #   - truncation order T
-#   - number of rollouts N  (must satisfy T <= N)
+#   - number of rollouts N >= T (T=1 corresponds to REINFORCE)
+#
+
 
 def grad_step(batch):
     # batch: list of (x, y) samples
@@ -435,88 +344,3 @@ def grad_step(batch):
     total_grad /= len(batch)
     apply_update(theta, total_grad)
 ```
-
-The only "magic" is `Estimate_wT`, which returns an unbiased estimate of
-$$
-w_T(p)=\sum_{k=0}^{T-1}(1-p)^k.
-$$
-
----
-
-## Technical note: estimating $w_T(p)$ via U-statistics
-
-This is the "solved subproblem." The idea is:
-
-- For a set of $n$ i.i.d. values $l_1,\dots,l_n$, define $a_j=1-l_j$.
-- The U-statistic estimator of $(1-p)^k$ is the average of all $k$-way products of the $a_j$'s.
-- Those averages are exactly (normalized) **elementary symmetric polynomials** in the $a_j$'s.
-
-### A direct (and reasonably efficient) implementation
-
-Given $a_1,\dots,a_n$, let $e_k$ be the degree-$k$ elementary symmetric sum:
-$$
-e_k = \sum_{1\le j_1<\cdots<j_k\le n}\prod_{t=1}^k a_{j_t}.
-$$
-Then
-$$
-\widehat{(1-p)^k}=\frac{e_k}{\binom{n}{k}}.
-$$
-
-You can compute $e_0,\dots,e_{T-1}$ in $O(nT)$ by the classic DP:
-
-- initialize $e_0=1$, $e_k=0$ for $k>0$,
-- for each $a$, update $e_k \leftarrow e_k + a\,e_{k-1}$ backwards for $k=T-1,\dots,1$.
-
-So `Estimate_wT(l_loo, T)` is:
-
-```python
-def Estimate_wT(l_loo, T):
-    # l_loo: list of length n = N-1
-    # returns unbiased estimate of w_T(p) = sum_{k=0}^{T-1} (1-p)^k
-
-    a = [1.0 - lj for lj in l_loo]
-    n = len(a)
-    K = min(T-1, n)
-
-    # elementary symmetric sums e[0..K]
-    e = [0.0] * (K + 1)
-    e[0] = 1.0
-    for aj in a:
-        for k in range(K, 0, -1):
-            e[k] += aj * e[k-1]
-
-    # sum normalized e_k / C(n, k)
-    w_hat = 0.0
-    for k in range(0, K + 1):
-        w_hat += e[k] / comb(n, k)
-
-    return w_hat
-```
-
-### Bonus: computing all LOO weights in $O(NT)$
-
-Naively, the LOO loop calls `Estimate_wT` $N$ times, for $O(N^2T)$ per prompt.
-
-There's a neat coefficient trick that reduces this to $O(NT)$:
-
-- For the full set of $N$ values, compute the symmetric sums $E_k$ of $a_i=1-l_i$ for $k\le T-1$.
-- For a fixed index $i$, let $B_k^{(i)}$ denote the symmetric sums excluding $i$.
-- They satisfy the identity (polynomial division of $\prod_j (1+a_j t)$ by $(1+a_i t)$):
-$$
-E_k = B_k^{(i)} + a_i B_{k-1}^{(i)},
-\qquad B_{-1}^{(i)}:=0,\quad B_0^{(i)}=1.
-$$
-So you can recover $B_k^{(i)}$ by the recurrence
-$$
-B_k^{(i)} = E_k - a_i B_{k-1}^{(i)} \quad \text{for } k=1,\dots,T-1,
-$$
-in $O(T)$ per $i$, after a single $O(NT)$ pass to get the $E_k$'s.
-
-Then
-$$
-\hat w_{-i}=\sum_{k=0}^{T-1}\frac{B_k^{(i)}}{\binom{N-1}{k}}.
-$$
-
----
-
-That's the full story up through the binary case, plus the continuous-likelihood generalization and the final LOO/U-statistic estimator (with the weight-estimation piece factored into a subroutine, and an optional technical section for how to implement it efficiently).

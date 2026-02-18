@@ -38,9 +38,6 @@ We also put forward a generalization that abstracts at the level of per-rollout 
 
 [Math is cheap, just show me the code](#pseudocode-pytorch-style-generalized-maxrl)
 
-
-[math is cheap show me the code](#pseudocode-pytorch-style-generalized-maxrl)
-
 ## Contents
 
 - [What's in the paper](#whats-in-the-paper)
@@ -373,4 +370,3 @@ def maxrl_step(batch, model, optimizer, T, N):
     total_loss.backward()
     optimizer.step()
 ```
-
