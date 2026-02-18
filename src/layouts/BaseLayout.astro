@@ -9,6 +9,8 @@ interface Props {
 const { title, description = 'Daily feed archive by Romulus' } = Astro.props;
 
 const pathname = Astro.url.pathname;
+const canonicalUrl = Astro.site ? new URL(pathname, Astro.site).toString() : Astro.url.toString();
+
 const navItems = [
   { href: '/', label: 'Home' },
   { href: '/blogs/', label: 'Blogs' },
@@ -30,6 +32,8 @@ const isActivePath = (href: string) => {
     <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
     <meta name="generator" content={Astro.generator} />
     <meta name="description" content={description} />
+    <meta name="robots" content="index,follow" />
+    <link rel="canonical" href={canonicalUrl} />
     <title>{title}</title>
   </head>
   <body>
