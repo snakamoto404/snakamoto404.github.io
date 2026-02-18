@@ -36,24 +36,21 @@ Luckily (for us), the authors focus on the binary, discrete-reward setting. This
 
 We also put forward a generalization that abstracts at the level of per-rollout likelihood, admitting application to e.g. regression tasks. We expect this generalization to be highly applicable to regression RL tasks with low signal-to-noise ratio. 
 
-[Math is cheap, just show me the code](#pseudocode-pytorch-style-generalized-maxrl)
+[Math is cheap, just show me the code](#pseudocode-generalized-maxrl)
 
 ## Contents
 
-- [What's in the paper](#whats-in-the-paper)
-- [What's new here](#whats-new-here)
 - [Preamble / ramble on MLE](#preamble--ramble-on-mle)
-- [Why cross-entropy instead of accuracy?](#why-cross-entropy-instead-of-accuracy)
-- [Information-theoretic/compression lens](#information-theoreticcompression-lens)
+  - [Information-theoretic/compression lens](#information-theoreticcompression-lens)
 - [Formulation, notation](#formulation-notation)
 - [Direct RL as a Maximum Likelihood approximation](#direct-rl-as-a-maximum-likelihood-approximation)
-- [Binary reasoning setup](#binary-reasoning-setup)
-- [Continuous regression](#continuous-regression)
-- [Putting them together: Jensen and Taylor](#putting-them-together-jensen-and-taylor)
+  - [Binary reasoning setup](#binary-reasoning-setup)
+  - [Continuous regression](#continuous-regression)
+  - [Putting them together: Jensen and Taylor](#putting-them-together-jensen-and-taylor)
 - [Gradient estimators](#gradient-estimators)
-- [Binary case](#binary-case)
+  - [Binary case](#binary-case)
 - [Generalization](#generalization)
-- [Pseudocode: generalized MaxRL](#pseudocode-pytorch-style-generalized-maxrl)
+- [Pseudocode: generalized MaxRL](#pseudocode-generalized-maxrl)
 
 ## Preamble / ramble on MLE
 
