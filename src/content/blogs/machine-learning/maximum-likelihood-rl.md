@@ -136,14 +136,14 @@ This is *exactly* the paper's core distinction: RL maximizes $\mathbb E[p]$, ML 
 
 (Also: yes, $\log\mathbb E[\mathbf 1[\cdot]]$ is a little silly-looking, but that's kind of the point: **you're doing maximum likelihood on a Bernoulli observation whose success probability is induced by a non-differentiable latent generator**.)
 
-### Continuous regression
+## Continuous regression
 
-Specialize to a Gaussian noise model:
+Specialize to a Gaussian noise model with $\sigma=1$: 
 $$
-l(y,z)=\hat P(y\mid z)=\mathcal N(\hat y(z),\sigma^2)(y)
+l(y,z)=\hat P(y\mid z)=\mathcal N(\hat y(z))(y)
 =
-\frac{1}{\sqrt{2\pi\sigma^2}}
-\exp\left[-\frac{(y-\hat y(z))^2}{2\sigma^2}\right].
+\frac{1}{\sqrt{2\pi}}
+\exp\left[-\frac{(y-\hat y(z))^2}{2}\right].
 $$
 Then
 $$
@@ -151,21 +151,20 @@ J(\theta)
 =
 \mathbb E_{(x,y)\sim\rho}
 \,\log\mathbb E_{z\sim m_\theta(\cdot\mid x)}
-\left[\exp\left(-\frac{(y-\hat y(z))^2}{2\sigma^2}\right)\right]
-+\text{const}(\sigma).
+\left[\exp\left(-\frac{(y-\hat y(z))^2}{2}\right)\right]
++\text{const}. 
 $$
 
-Two quick remarks:
-
-1. **This is a log-sum-exp / soft-min over squared error across rollouts.** Fix $(x,y)$. The inner term is $\log\mathbb E_z[\exp(-\mathrm{MSE}(z)/(2\sigma^2))]$, which is the classic "soft" best-of-$K$ operator: it concentrates mass on the rollouts with smallest error.
-
-2. The intuitive regression objective which minimizes per-rollout MSE lower-bounds the maximum-likelihood objective by $\log$-concavity. 
+The "direct RL analogue" of pass-rate training is *not* MSE; it is expected *likelihood*:
 $$
-J_{\mathrm{mse}}
+J_{\mathrm{direct}}
 =
--\dfrac 1 2 \mathbb E_{(x,y)\sim\rho}
-\,\mathbb E_{z\sim m_\theta(\cdot\mid x)}\,\big(y - \hat y(z)\big)^2
+\mathbb E_{(x,y)\sim\rho}
+\,\mathbb E_{z\sim m_\theta(\cdot\mid x)}\,l(y,z).
 $$
+This is the clean regression analogue of maximizing expected accuracy $\mathbb E[p]$ instead of log-likelihood $\mathbb E[\log p]$.
+
+(If you want this to literally satisfy $l\in(0,1]$ so the Maclaurin series below is automatic, just pick a scale so the peak density is $\le 1$; multiplying $l$ by a $\theta$-independent constant only adds a constant to $\log p_\theta$, hence doesn't change the ML gradient.)
 
 ### Putting them together: Jensen and Taylor
 

@@ -192,12 +192,12 @@ This is *exactly* the paper's core distinction: RL maximizes $\mathbb E[p]$, ML 
 
 ### Continuous regression
 
-Specialize to a Gaussian noise model:
+Specialize to a Gaussian noise model with $\sigma=1$: 
 $$
-l(y,z)=\hat P(y\mid z)=\mathcal N(\hat y(z),\sigma^2)(y)
+l(y,z)=\hat P(y\mid z)=\mathcal N(\hat y(z))(y)
 =
-\frac{1}{\sqrt{2\pi\sigma^2}}
-\exp\left[-\frac{(y-\hat y(z))^2}{2\sigma^2}\right].
+\frac{1}{\sqrt{2\pi}}
+\exp\left[-\frac{(y-\hat y(z))^2}{2}\right].
 $$
 Then
 $$
@@ -205,15 +205,11 @@ J(\theta)
 =
 \mathbb E_{(x,y)\sim\rho}
 \,\log\mathbb E_{z\sim m_\theta(\cdot\mid x)}
-\left[\exp\left(-\frac{(y-\hat y(z))^2}{2\sigma^2}\right)\right]
-+\text{const}(\sigma).
+\left[\exp\left(-\frac{(y-\hat y(z))^2}{2}\right)\right]
++\text{const}. 
 $$
 
-Two quick remarks:
-
-1. **This is a log-sum-exp / soft-min over squared error across rollouts.** Fix $(x,y)$. The inner term is $\log\mathbb E_z[\exp(-\mathrm{MSE}(z)/(2\sigma^2))]$, which is the classic "soft" best-of-$K$ operator: it concentrates mass on the rollouts with smallest error.
-
-2. The "direct RL analogue" of pass-rate training is *not* MSE; it is expected *likelihood*:
+The "direct RL analogue" of pass-rate training is *not* MSE; it is expected *likelihood*:
 $$
 J_{\mathrm{direct}}
 =
