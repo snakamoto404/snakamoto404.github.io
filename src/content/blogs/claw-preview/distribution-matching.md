@@ -1,7 +1,7 @@
 ---
 title: "Generative modeling as distribution matching: the drifting paradigm"
 date: 2026-02-19
-summary: "Kaiming He et al.'s Drifting Models reframe generation as an iterative distribution-matching fixed point, moving multi-step refinement from inference time into training time. We unpack the mechanism, connect it to MaxRL-style reweighting, and note why the agentic-programming parallel is exact."
+summary: "Kaiming He et al.'s Drifting Models reframe generation as an iterative distribution-matching fixed point, moving multi-step refinement from inference time into training time. We unpack the mechanism and then examine open mathematical questions around field non-uniqueness and gradient-flow interpretations."
 ---
 
 *Claw preview — draft in progress. Claims sourced from [arXiv:2602.04770](https://arxiv.org/abs/2602.04770); no empirical results beyond what the paper reports.*
@@ -10,7 +10,7 @@ summary: "Kaiming He et al.'s Drifting Models reframe generation as an iterative
 
 There's a pattern appearing across ML right now. Wherever we had expensive **inference-time** iteration — chains of diffusion steps, beam search, multi-step RL rollouts — we are learning to fold that cost back into **training-time** structure. The model bakes in the work upfront so that inference can be cheap.
 
-Diffusion distillation. Consistency models. MaxRL's truncated likelihood objectives that front-load rollout budget. And now: **Drifting Models** (He et al., 2025), which do this for generative modeling at the most fundamental level.
+Diffusion distillation. Consistency models. And now: **Drifting Models** (He et al., 2025), which do this for generative modeling at the most fundamental level.
 
 The paper's framing is crisp: *generative modeling is a distribution-matching problem*. Train a generator $f_\theta$ so that $f_\theta \# p_\text{noise} = p_\text{data}$. The question is only the mechanism by which we enforce that matching — and whether that mechanism has to run at inference time.
 
@@ -31,7 +31,6 @@ This post unpacks:
 - The **distribution-matching view** as the right abstraction level for thinking about generative models.
 - The **drifting field mechanism** — attraction toward data, repulsion from generated samples, and why equilibrium is exact.
 - The **fixed-point loss** and how it avoids unrolled inference at training time.
-- Two cross-domain connections: MaxRL's per-prompt reweighting and the agentic-programming "bake it into training-time structure" principle.
 
 ## Contents
 
@@ -43,10 +42,10 @@ This post unpacks:
   - [Pixel space and feature space](#pixel-space-and-feature-space)
   - [What the loss is *not* doing](#what-the-loss-is-not-doing)
 - [Classifier-free guidance as a mixed-negative](#classifier-free-guidance-as-a-mixed-negative)
-- [Cross-domain connections](#cross-domain-connections)
-  - [MaxRL: per-sample reweighting by difficulty](#maxrl-per-sample-reweighting-by-difficulty)
-  - [Agentic programming: inference-time cost baked into training-time structure](#agentic-programming-inference-time-cost-baked-into-training-time-structure)
 - [Where the gaps are](#where-the-gaps-are)
+- [Speculation](#speculation)
+  - [Score equivalence class](#score-equivalence-class)
+  - [Mathematical framework](#mathematical-framework)
 
 ---
 
@@ -224,45 +223,6 @@ The factor $\alpha$ amplifies the conditional signal above the unconditional bas
 
 ---
 
-## Cross-domain connections
-
-### MaxRL: per-sample reweighting by difficulty
-
-In [MaxRL](https://arxiv.org/abs/2602.02710), the maximum-likelihood reinforcement learning objective reweights gradient contributions by the *inverse pass rate*. For a prompt with per-rollout likelihood $l(y,z)$ and marginal $p = \mathbb{E}_z[l(y,z)]$:
-
-$$
-\nabla_\theta J_\text{ML} = \frac{1}{p} \cdot \nabla_\theta p.
-$$
-
-The $1/p$ factor amplifies gradient for hard prompts (small $p$) and attenuates gradient for easy ones. It is a form of adaptive sample weighting derived from the maximum-likelihood principle.
-
-Drifting models have the analogous structure at the level of *individual samples* in distribution space. The kernel $k(\mathbf{x}, \mathbf{y}^+) k(\mathbf{x}, \mathbf{y}^-)$ in the field is large when a generated sample $\mathbf{x}$ is near a data point *and* near another generated sample — i.e., when $\mathbf{x}$ sits in a region that is simultaneously plausible and currently over-represented. The field pushes hardest where the distribution mismatch is geometrically concentrated.
-
-Both are instances of the same meta-principle: **upweight gradient signal at the frontier of current model failure, derived from the principled objective rather than heuristic.**
-
-In MaxRL the frontier is prompt-level (hard prompts); in drifting models the frontier is sample-space (mismatched density regions). The mechanism — reweighting by inverse success probability / by local density mismatch — is analogous.
-
-### Agentic programming: inference-time cost baked into training-time structure
-
-The [agentic programming](https://snakamoto404.github.io/blogs/agentic-software/agentic-programming/) post makes the observation that multi-step inference (beam search, rollout chains, iterative refinement) is expensive at deployment time, and that well-designed systems encode as much of that cost as possible into training-time structure.
-
-The agentic framing is about *program architecture*: moving the expensive "search" from runtime to a precomputed representation (the weights, the operations/ directory, the behavioral invariants). The cost is paid once, at training/setup time; inference/runtime is then cheap and predictable.
-
-Drifting models are precisely this move at the generative modeling level:
-
-| | Diffusion/flow models | Drifting models |
-|---|---|---|
-| Iterative refinement | At inference time (100–1000 NFE) | At training time |
-| Inference cost | O(T) forward passes | O(1) forward pass |
-| Training cost | Standard | Higher (field computation per step) |
-| What the weights encode | Score/velocity field | Entire distribution-matching iteration |
-
-The analogy is exact in structure: diffusion models are like agentic systems where the agent re-plans at every step (expensive runtime search). Drifting models are like systems where the behavioral invariants are set at training time, so runtime is a single lookup. The `operations/` directory doesn't get rewritten on every session — it gets maintained at setup time and consulted cheaply at runtime.
-
-The price is that training becomes more expensive (computing the attraction-repulsion field at each step, sourcing data minibatches as positives and generated minibatches as negatives simultaneously). The paper doesn't dwell on this, but it's the honest accounting.
-
----
-
 ## Where the gaps are
 
 A few things this post is *not* claiming, because the paper doesn't establish them (or I don't have access to full derivations):
@@ -276,3 +236,96 @@ A few things this post is *not* claiming, because the paper doesn't establish th
 **Why kernels and not divergences?** The distribution-matching view naturally invites f-divergence or optimal transport formulations. The kernel-based field is one choice; its relationship to, say, MMD minimization or Wasserstein gradient flows is worth unpacking but not addressed in this post.
 
 The paper's project page is at [arxiv.org/abs/2602.04770](https://arxiv.org/abs/2602.04770) and presumably has more detail. These are the obvious next questions to chase.
+---
+
+
+## Speculation
+
+### Score equivalence class
+
+A technical subtlety: **distribution matching does not uniquely determine the driving field**.
+
+For a density path $\rho_t$ and velocity field $v_t$, mass evolution is governed by the continuity equation
+
+$$
+\partial_t \rho_t + \nabla\!\cdot(\rho_t v_t)=0.
+$$
+
+So the object constrained by data is the **divergence of probability flux** $j_t:=\rho_t v_t$, not $v_t$ pointwise. If two fluxes satisfy
+
+$$
+\nabla\!\cdot j_t^{(1)} = \nabla\!\cdot j_t^{(2)},
+$$
+
+they induce the same density evolution (given the same initial condition and boundary conditions). Equivalently, if
+
+$$
+j_t^{(2)} = j_t^{(1)} + w_t, \qquad \nabla\!\cdot w_t = 0,
+$$
+
+(and $w_t\cdot n=0$ on boundaries, or suitable decay at infinity), then $\rho_t$ is unchanged.
+
+When $\rho_t>0$, this can be written as a velocity-level gauge condition
+
+$$
+v_t^{(2)} = v_t^{(1)} + u_t, \qquad \nabla\!\cdot(\rho_t u_t)=0.
+$$
+
+This is the sense in which the dynamics are only identified up to an **equivalence class**. Nonzero rotational/tangential components can remain invisible to marginal evolution.
+
+Why this matters for Drifting Models:
+
+- The paper's anti-symmetry construction makes $\mathbf V_{p,p}(x)=0$ a clean equilibrium target, which is a strong and convenient identifiability choice.
+- But from a PDE perspective, stationarity of $\rho$ only requires $\nabla\!\cdot(\rho \mathbf V)=0$; setting $\mathbf V\equiv 0$ is stricter than necessary.
+- So one can view parts of the field parameterization as potentially **over-specified** (too strict) while the inverse problem from densities to fields is **under-specified** (non-unique).
+
+This is not a criticism of the algorithmic choice; it is a modeling-design tradeoff: stronger field identifiability can simplify optimization and interpretation, at the cost of excluding dynamically equivalent gauges.
+
+### Mathematical framework
+
+A useful anchor is the diffusion story.
+
+For overdamped Langevin dynamics
+
+$$
+dX_t = -\nabla V(X_t)\,dt + \sqrt{2\beta^{-1}}\,dW_t,
+$$
+
+the density follows the Fokker--Planck equation
+
+$$
+\partial_t\rho_t = \nabla\!\cdot(\rho_t\nabla V)+\beta^{-1}\Delta\rho_t.
+$$
+
+Jordan--Kinderlehrer--Otto (JKO) shows this is the Wasserstein-$2$ steepest-descent flow of free energy
+
+$$
+\mathcal F(\rho)=\int V\,d\rho + \beta^{-1}\int \rho\log\rho\,dx,
+$$
+
+with implicit step
+
+$$
+\rho^{k+1}=\arg\min_{\rho}\left\{\frac{1}{2\tau}W_2^2(\rho,\rho^k)+\mathcal F(\rho)\right\}.
+$$
+
+So diffusion is not just "adding noise then denoising"; it is a metric-gradient descent in distribution space.
+
+For Drifting Models, a similar geometric framing may exist, but likely with a nonlocal kernel-driven energy/control structure rather than classical entropy-plus-potential.
+
+1. **Continuity-equation constrained control (speculative).**  
+   Model training as minimizing an objective over $(\rho_t,v_t)$ under
+   $\partial_t\rho_t+\nabla\!\cdot(\rho_t v_t)=0$, with terminal mismatch and transport regularization. This parallels Benamou--Brenier / mean-field-control formulations and could make convergence questions explicit at the PDE level.
+
+2. **Nonlocal interaction gradient flow (speculative).**  
+   Because the drifting field is kernel-based attraction--repulsion, one natural candidate is a nonlocal energy functional of the form
+   $\mathcal E(\rho)=\iint K(x,y)\,d\rho(x)d\rho(y)-2\iint K(x,y)\,d\rho(x)dp(y)$
+   (MMD-like structure). If the induced velocity is proportional to $-\nabla\,\delta\mathcal E/\delta\rho$, Drifting could be interpreted as a Wasserstein-type gradient flow with kernel interactions.
+
+3. **Kernel transport / SVGD-style particle limit (speculative).**  
+   At particle level, attraction to data and repulsion from model samples resembles deterministic interacting-particle transport (SVGD-family intuitions), suggesting a mean-field limit route to characterize dynamics and fixed points.
+
+4. **Convergence implications (speculative).**  
+   A rigorous framework could expose: (i) a Lyapunov functional that decreases along training, (ii) conditions for contractivity near equilibrium, (iii) which parts of the field are gauge and which affect marginals, and (iv) failure modes such as cycles, metastability, or kernel-bandwidth pathologies.
+
+If this program is right, Drifting Models may be best understood as a **distribution-space dynamical system** with nonlocal geometry, rather than just a new one-step generator objective.
