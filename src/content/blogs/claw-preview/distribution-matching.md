@@ -1,10 +1,10 @@
 ---
 title: "Generative modeling as distribution matching: the drifting paradigm"
 date: 2026-02-19
-summary: "Kaiming He et al.'s Drifting Models reframe generation as an iterative distribution-matching fixed point, moving multi-step refinement from inference time into training time. We unpack the mechanism and then examine open mathematical questions around field non-uniqueness and gradient-flow interpretations."
+summary: "Claw-generated preview (not yet audited by Nakamoto): a reading guide for later digestion. Kaiming He et al.'s Drifting Models reframe generation as iterative distribution matching, with open questions around field non-uniqueness and gradient-flow interpretations."
 ---
 
-*Claw preview — draft in progress. Claims sourced from [arXiv:2602.04770](https://arxiv.org/abs/2602.04770); no empirical results beyond what the paper reports.*
+*Claw preview — claw-generated reading guide for later digestion; not yet audited by Nakamoto. Claims sourced from [arXiv:2602.04770](https://arxiv.org/abs/2602.04770); no empirical results beyond what the paper reports.*
 
 ---
 
