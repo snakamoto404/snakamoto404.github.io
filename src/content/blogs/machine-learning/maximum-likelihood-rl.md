@@ -300,7 +300,7 @@ In addition, this is a particularly neat expression because it is, again, a simp
 
 > It remains to solve the problem: given iid samples $(l_0, \dots, l_{N-1})$, estimate 
 > $$w_T(p) = \sum_{k=0}^{T-1}(1-p)^k.$$
-> Taking $T=N$, it suffices to obtain estimators for $(1-p)^k$ for all $1\leq k\leq N-1$. Fortunately, it turns out that this is a textbook problem with a known MVUE (Minimal Variance Unbiased Estimator) using U-statistics (something something elementary symmetric polynomials, you're welcome to look it up -- drop a comment!). 
+> Taking $T=N$, it suffices to obtain estimators for $(1-p)^k$ for all $1\leq k\leq N-1$. Fortunately, this turns out to be a textbook problem with a known MVUE (Minimal Variance Unbiased Estimator) using U-statistics (something something elementary symmetric polynomials, you're welcome to look it up -- drop a comment!). 
 
 ## Pseudocode: generalized MaxRL
 
