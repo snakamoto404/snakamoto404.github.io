@@ -296,12 +296,7 @@ $$
 :=
 \frac{1}{N}\sum_{j=1}^N \omega_j\,l_j\,S_j.
 $$
-In addition, this is a particularly neat expression because it is, again, a simple reweighted average of the rollout scores! To reduce variance, we can subtract any constant baseline (since $\mathbb E[S]=0$). A simple choice is $1/N$:
-$$
-\hat g_T(x,y)
-:=
-\frac{1}{N}\sum_{j=1}^N \left(\omega_j\,l_j - \dfrac 1 N\right)\,S_j.
-$$
+In addition, this is a particularly neat expression because it is, again, a simple reweighted average of the rollout scores! To reduce variance, we can subtract any constant baseline (since $\mathbb E[S]=0$).
 
 > It remains to solve the problem: given iid samples $(l_0, \dots, l_{N-1})$, estimate 
 > $$w_T(p) = \sum_{k=0}^{T-1}(1-p)^k.$$
@@ -333,7 +328,7 @@ def Estimate_wT(l_loo, T):
     return w_hat
 
 
-def maxrl_step(batch, model, optimizer, T, N):
+def maxrl_step(batch, model, optimizer, T, N, baseline_const=0.0):
     # batch: list of (x, y) samples
     optimizer.zero_grad()
     total_loss = 0.0
@@ -353,11 +348,9 @@ def maxrl_step(batch, model, optimizer, T, N):
             omega_j.append(Estimate_wT(l_loo, T))
         omega_j = torch.stack(omega_j)  # [N]
 
-        # 4) constant baseline + equivalent-loss (one backward pass)
+        # 4) subtract constant baseline + equivalent-loss (one backward pass)
         with torch.no_grad():
-            w_j = omega_j * l_j
-            b = 1.0 / N
-            adv_j = w_j - b
+            adv_j = omega_j * l_j - baseline_const
 
         # Equivalent loss: gradient is (adv_j * grad logp_j)
         loss_x = -(adv_j.detach() * logp_j).mean()
