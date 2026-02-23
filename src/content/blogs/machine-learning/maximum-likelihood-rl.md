@@ -13,11 +13,17 @@ No one does this, presumably for good reasons; how does such a model compare to 
 Turns out that a highly impressive [recent paper](https://arxiv.org/pdf/2602.02710) from CMU goes *exactly* down this rabbit hole -- and comes up with actionable, principled insights. 
 They point out that correctness-based RL is optimizing
 $$
+\begin{equation}
 J_{\mathrm{RL}}(\theta)=\mathbb E_{x\sim\rho}\,p_\theta(x)
+\label{eq:j-rl}
+\end{equation}
 $$
 where $p_\theta(x)$ is the success probability ("pass rate"), while the likelihood principle suggests optimizing
 $$
+\begin{equation}
 J_{\mathrm{ML}}(\theta)=\mathbb E_{x\sim\rho}\,\log p_\theta(x),
+\label{eq:j-ml}
+\end{equation}
 $$
 whose gradient upweights low-pass-rate inputs by a factor $1/p_\theta(x)$. 
 
@@ -94,11 +100,17 @@ l(y,z) := \hat P(y\mid z).
 $$
 - Marginalize over rollouts:
 $$
+\begin{equation}
 p_\theta(y\mid x) := \mathbb E_{z\sim m_\theta(\cdot\mid x)} l(y,z).
+\label{eq:marginal-likelihood}
+\end{equation}
 $$
 - Score function:
 $$
+\begin{equation}
 S(x,z) := \nabla_\theta \log m_\theta(z\mid x).
+\label{eq:score}
+\end{equation}
 $$
 
 This score vector is almost always **the only** intermediate through which policy parameters $\theta$ touch policy-gradient objectives. Most algorithms differ mainly in how they reweight or shift these score vectors.
@@ -132,7 +144,7 @@ J_{\mathrm{ML}}
 =
 \mathbb E_{(x,y)\sim\rho}\,\log\mathbb E_{z\sim m_\theta(\cdot\mid x)} \mathbf 1[\hat y(z)=y].
 $$
-This is *exactly* the paper's core distinction: RL maximizes $\mathbb E[p]$, ML maximizes $\mathbb E[\log p]$.
+This is *exactly* the paper's core distinction: RL maximizes $\eqref{eq:j-rl}$, ML maximizes $\eqref{eq:j-ml}$.
 
 (Also: yes, $\log\mathbb E[\mathbf 1[\cdot]]$ is a little silly-looking, but that's *kind of the point*: we're doing maximum likelihood on a Bernoulli observation whose success probability is induced by a non-differentiable latent generator.)
 
@@ -188,9 +200,12 @@ Note that this expansion is about $p=1$ (success), so $p\to 0$ implies greater d
 
 Truncating to order $T$ gives the **compute-indexed MaxRL objective**
 $$
+\begin{equation}
 J_T(p)
 :=
 -\sum_{k=1}^T \frac{(1-p)^k}{k}.
+\label{eq:j-truncated}
+\end{equation}
 $$
 
 - $T=1$: $J_1(p)=-(1-p)=p-1$, that is RL / pass-rate training up to an additive constant.
@@ -201,8 +216,14 @@ $$
 \nabla_\theta J_T(p_\theta)
 =
 \sum_{k=1}^T (1-p)^{k-1} \cdot \nabla p
-=: w_T(p)\cdot \nabla p, \quad w_T(p)=\sum_{k=0}^{T-1}(1-p)^k
-=\frac{1-(1-p)^T}{p}.
+=: w_T(p)\cdot \nabla p
+$$
+$$
+\begin{equation}
+w_T(p)=\sum_{k=0}^{T-1}(1-p)^k
+=\frac{1-(1-p)^T}{p}
+\label{eq:weight}
+\end{equation}
 $$
 As $T\to\infty$, $w_T(p)\to 1/p$, recovering ML's inverse-probability reweighting.
 Now use the log-derivative trick on
@@ -215,9 +236,12 @@ p=\mathbb E_{z\sim m_\theta}[l(y,z)]:
 $$
 Therefore
 $$
+\begin{equation}
 \nabla_\theta J_T(p)
 =
  w_T(p)\,\mathbb E_{z\sim m_\theta(\cdot\mid x)}\big[l(y,z)\,S(x,z)\big].
+\label{eq:gradient-main}
+\end{equation}
 $$
 
 At this point we can already read off the two qualitative behaviors:
@@ -252,19 +276,22 @@ which is unbiased for $\nabla_\theta\,\mathrm{pass@}1(x)$.
 
 - **MaxRL's key estimator** is: average scores over *successful* trajectories only,
 $$
+\begin{equation}
 \hat g_N^{\mathrm{bin}}(x)
 :=
 \begin{cases}
 \frac{1}{K}\sum_{j=1}^N l_j S_j, & K\ge 1,\\
 0, & K=0.
 \end{cases}
+\label{eq:binary-estimator}
+\end{equation}
 $$
 
 Conditioning on $K\geq 1$, note that 
 $$
 \mathbb E_z\big[\hat g_N^{\mathrm{bin}}(x)\mid K\geq 1\big] = \mathbb E_z[S\mid l=1] = \dfrac{\mathbb E[l\cdot S]}{\mathbb E[l]} = \dfrac{\nabla p}{p} = \nabla \log p
 $$
-It's an unbiased ML estimator, conditioning on $K\geq 1$!! The bias comes from $K=0$ which happens with probability $(1-p)^N$. Substituting shows that this exactly equals the $T$-order truncated objective. 
+It's an unbiased ML estimator, conditioning on $K\geq 1$!! The bias comes from $K=0$ which happens with probability $(1-p)^N$. Substituting shows that this exactly equals the $\eqref{eq:j-truncated}$. 
 $$
 \mathbb E_z\big[\hat g_N^{\mathrm{bin}}(x)\big] = (1-(1-p)^N) \nabla \log p = w_T(p)\cdot \nabla p = \nabla J_T(p)
 $$
@@ -292,9 +319,12 @@ $$
 We know that $l_j S_j$ is an unbiased estimator for $\nabla p = \mathbb E[l\cdot S]$, 
 then the leave-one-out product $\omega_j l_j \cdot S_j$ is unbiased for $w_T(p)\nabla_\theta p$. Averaging over $j$ gives the final estimator:
 $$
+\begin{equation}
 \hat g_T(x,y)
 :=
 \frac{1}{N}\sum_{j=1}^N \omega_j\,l_j\,S_j.
+\label{eq:general-estimator}
+\end{equation}
 $$
 In addition, this is a particularly neat expression because it is, again, a simple reweighted average of the rollout scores! To reduce variance, we can subtract any constant baseline (since $\mathbb E[S]=0$).
 
