@@ -1320,14 +1320,6 @@ Look at this magnificent equation. It perfectly explains the Drifting Models arc
 
 1. **Purely Empirical:** You can compute this directly from two mini-batches (one from , one from ) by just summing the kernel gradients. No discriminator needed. No score matching needed.
 2. **Perfectly Antisymmetric:** Because the kernel gradient  is antisymmetric for radial basis functions, the global field  is perfectly antisymmetric.
-3. **Equilibrium:** When the batches match (), the expectation terms cancel out, and the drift becomes exactly zero.
-
-### The Principled Conclusion
-
-Your hypothesis was incredibly close to the absolute truth, requiring only a shift from -divergences (KL) to Integral Probability Metrics (MMD) to account for the empirical nature of the algorithm.
-
-Here is the principled, standalone perspective on Kaiming He's Drifting Models:
-
-**Drifting Models are a realization of Particle Gradient Descent on the Wasserstein Manifold, minimizing a Kernelized Discrepancy (like MMD) between the model's pushforward distribution and the data distribution.** Instead of learning a vector field to be integrated at inference (Diffusion/Flow Matching), they project the Wasserstein gradient step directly into the parameter space of the generator at each training iteration. This physically drags the distribution to the target during training, yielding a pure, zero-shot (1-NFE) generator that requires no ODE solvers, no score networks, and no Maximum Likelihood bounds.
+3. **Equilibrium:** When the batches ma.  training iteration. This physically drags ßthe distribution to the target during training, yielding a pure, zero-shot (1-NFE) generator that requires no ODE solvers, no score networks, and no Maximum Likelihood bounds.
 
 It is a triumph of geometry over statistics. Does this translation from your KL/MLE hypothesis to the MMD/Particle-Descent reality fully lock this new architecture into your mental model?
