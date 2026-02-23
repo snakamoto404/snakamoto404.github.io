@@ -83,8 +83,22 @@
       -webkit-overflow-scrolling: touch;
     }
 
+    mjx-container[jax="SVG"] {
+      @apply inline-block;
+      margin-inline: 0;
+      vertical-align: -0.2em;
+    }
+
+    mjx-container[jax="SVG"] svg {
+      display: inline-block;
+    }
+
     mjx-container[jax="SVG"][display="true"] {
       @apply my-6 max-w-full overflow-x-auto overflow-y-hidden;
+      margin-inline: auto;
+      width: fit-content;
+      display: block;
+      text-align: left;
       -webkit-overflow-scrolling: touch;
     }
   }
