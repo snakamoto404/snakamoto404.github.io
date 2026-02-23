@@ -86,12 +86,12 @@
     mjx-container[jax="SVG"] {
       @apply inline-block;
       margin-inline: 0;
-      vertical-align: 0.25em;
+      vertical-align: 0;
     }
 
     mjx-container[jax="SVG"] svg {
       display: inline-block;
-      vertical-align: 0.25em !important;
+      vertical-align: 0 !important;
     }
 
     mjx-container[jax="SVG"][display="true"] {
