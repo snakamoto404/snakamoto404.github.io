@@ -4,7 +4,7 @@ date: 2026-02-16
 summary: "A highly principled foundational RL paper with easily actionable changes. We derive the continuous generalization."
 ---
 
-I've always wondered what happens if one applies RL to supervisable tasks. For example, given a binary classification task $(x_k, y_k)$, maximize accuracy as the reward
+I've always wondered what happens if one applies RL to supervisable tasks. For example, given a binary classification task (x_k, y_k), maximize accuracy as the reward
 $$
 R := \mathbb E\,[y\,p_\theta(x)+(1-y)(1-p_\theta(x))].
 $$
