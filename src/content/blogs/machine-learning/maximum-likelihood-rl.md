@@ -291,7 +291,7 @@ Conditioning on $K\geq 1$, note that
 $$
 \mathbb E_z\big[\hat g_N^{\mathrm{bin}}(x)\mid K\geq 1\big] = \mathbb E_z[S\mid l=1] = \dfrac{\mathbb E[l\cdot S]}{\mathbb E[l]} = \dfrac{\nabla p}{p} = \nabla \log p
 $$
-It's an unbiased ML estimator, conditioning on $K\geq 1$!! The bias comes from $K=0$ which happens with probability $(1-p)^N$. Substituting shows that this exactly equals the $\eqref{eq:j-truncated}$. 
+It's an unbiased ML estimator, conditioning on $K\geq 1$!! The bias comes from $K=0$ which happens with probability $(1-p)^N$. Substituting shows that this exactly equals the gradient form in $\eqref{eq:gradient-main}$.
 $$
 \mathbb E_z\big[\hat g_N^{\mathrm{bin}}(x)\big] = (1-(1-p)^N) \nabla \log p = w_T(p)\cdot \nabla p = \nabla J_T(p)
 $$
