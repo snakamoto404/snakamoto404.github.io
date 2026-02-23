@@ -6,9 +6,16 @@ summary: "Part 0 of a series on optimal transport in generative models. We build
 
 Generative modeling is, at bottom, a problem about distributions: you have one (noise), you want another (data), and you need a *principled* way to push one toward the other. But what does "principled" mean here? Cross-entropy? KL divergence? Adversarial discrimination?
 
-It turns out that there is an ancient, beautiful, and deeply physical answer: **optimal transport**. The question is deceptively simple — given two piles of mass, what is the cheapest way to rearrange one into the other? — but the theory that falls out of it underpins an enormous fraction of modern generative modeling, from Wasserstein-GANs to flow matching to diffusion.
+There is a tension at the heart of the question. On one side, Euclidean geometry gives us clean, computable objectives — $L^2$ regression, mean squared error — but these are defined on *points*, not distributions. On the other side, information-theoretic divergences like KL are proper statistical distances between distributions, but they blow up whenever supports don't overlap (try computing $\text{KL}(p \| q)$ when $p$ puts mass where $q$ doesn't). Generative models live in the gap: we write $L^2$ losses in PyTorch and somehow distributions converge. *Why does this work?*
 
-This series builds the optimal transport toolkit from scratch, with one eye on the mathematics and the other on the generative models it enables. The arc is:
+The answer is **optimal transport**. The question it asks is deceptively simple — given two piles of mass, what is the cheapest way to rearrange one into the other? — but the theory that falls out of it provides the critical bridge between Euclidean geometry and statistical divergences. The Wasserstein distance is well-defined for arbitrary measures (no absolute continuity required), inherits geometric structure from the base space (geodesics, curvature, gradients), and — crucially — allows us to understand $L^2$ regression training objectives as gradient steps on proper statistical divergences in the space of distributions. This is the framework that makes score matching, flow matching, and drifting models *principled*, not just empirically effective.
+
+This series builds the optimal transport toolkit from scratch, with one eye on the mathematics and the other on the generative models it enables. Two themes run through everything:
+
+1. **The Wasserstein bridge.** Optimal transport connects Euclidean geometry to statistical divergences. This empowers us to understand training processes with $L^2$ regression objectives through the lens of proper distributional distances.
+2. **Static–dynamic unification.** The equivalence between static transport plans and dynamic fluid flows hinges on a clean decomposition: solve the single-particle Lagrangian (Euler-Lagrange → straight line), then marginalize. This is the engine under conditional flow matching and the key to making the theory computable.
+
+The arc:
 
 - **Part 0** (this post): the *static* picture — transport plans, the Kantorovich formulation, and the variational dual that gives us Wasserstein-GAN.
 - **[Part 1](/blogs/machine-learning/ot-generative-1-wasserstein-geometry/)**: the *geometric* picture — the space of probability distributions is itself a Riemannian manifold, and optimal transport defines its metric.
