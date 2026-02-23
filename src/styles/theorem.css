@@ -1,0 +1,55 @@
+.theorem-env {
+  @apply my-6;
+}
+
+.theorem-env .theorem-env__head {
+  @apply mb-2 font-medium;
+}
+
+.theorem-env__body {
+  @apply leading-7;
+}
+
+.theorem-env--theorem,
+.theorem-env--proposition,
+.theorem-env--lemma,
+.theorem-env--corollary {
+  @apply border-l-4 border-l-accent bg-accent/8 px-4 py-3;
+}
+
+.theorem-env--theorem .theorem-env__body,
+.theorem-env--proposition .theorem-env__body,
+.theorem-env--lemma .theorem-env__body,
+.theorem-env--corollary .theorem-env__body {
+  @apply italic;
+}
+
+.theorem-env--definition {
+  @apply border-l-4 border-l-slate-500 bg-slate-100/60 px-4 py-3;
+}
+
+.theorem-env--definition .theorem-env__body {
+  @apply not-italic;
+}
+
+.theorem-env--proof {
+  @apply px-0 py-2;
+}
+
+.theorem-env--proof .theorem-env__body {
+  @apply font-normal;
+}
+
+.theorem-env--proof .theorem-env__qed {
+  @apply mt-2 block text-right;
+}
+
+.theorem-env--remark,
+.theorem-env--example {
+  @apply border-l-4 border-l-border/70 bg-border/30 px-4 py-3;
+}
+
+.theorem-env--remark .theorem-env__body,
+.theorem-env--example .theorem-env__body {
+  @apply text-sm;
+}

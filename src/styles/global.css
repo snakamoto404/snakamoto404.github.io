@@ -1,6 +1,6 @@
 @import "tailwindcss";
-@import "katex/dist/katex.min.css";
 @import "./typography.css";
+@import "./theorem.css";
 
 @custom-variant dark (&:where([data-theme=dark], [data-theme=dark] *));
 

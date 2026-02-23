@@ -2,8 +2,10 @@ import { defineConfig } from 'astro/config';
 import sitemap from '@astrojs/sitemap';
 import tailwindcss from '@tailwindcss/vite';
 import remarkMath from 'remark-math';
-import rehypeKatex from 'rehype-katex';
+import rehypeMathjax from 'rehype-mathjax';
 import rehypeSlug from 'rehype-slug';
+import remarkDirective from 'remark-directive';
+import { remarkTheorem } from './src/plugins/remark-theorem.mjs';
 
 export default defineConfig({
   site: 'https://snakamoto404.github.io',
@@ -17,8 +19,28 @@ export default defineConfig({
     })
   ],
   markdown: {
-    remarkPlugins: [remarkMath],
-    rehypePlugins: [rehypeSlug, rehypeKatex]
+    remarkPlugins: [remarkMath, remarkDirective, remarkTheorem],
+    rehypePlugins: [
+      rehypeSlug,
+      [rehypeMathjax, {
+        tex: {
+          tags: "ams",
+          macros: {
+            df: ["\\dfrac{#1}{#2}", 2],
+            pd: ["\\partial_{#1}", 1],
+            la: "\\langle",
+            ra: "\\rangle",
+            mbf: ["\\mathbf{#1}", 1],
+            mbb: ["\\mathbb{#1}", 1],
+            mrm: ["\\mathrm{#1}", 1],
+            R: "\\mathbb{R}",
+            E: "\\mathbb{E}",
+          },
+          processRefs: true,
+          tagSide: "right",
+        },
+      }],
+    ],
   },
   vite: {
     plugins: [tailwindcss()]
