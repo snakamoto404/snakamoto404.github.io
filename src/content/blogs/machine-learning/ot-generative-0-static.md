@@ -4,7 +4,7 @@ date: 2026-02-23
 summary: "Why we care about optimal transport (OT), and introduction to the static viewpoint. Variational characterization, and WGAN."
 ---
 
-At the heart of modern generative modeling, there is a fundamental tension between two spaces. On **sample space** $\mathbb R^n$, Euclidean geometry gives us clean, benign objectives such as $L^2$ mean squared error. On the **space of distributions** $\mathcal P(\mathbb R^n)$ maximum likelihood singles out the Kullback-Leibler divergence as the principled objective, and $\mathcal P(\mathbb R^n)$ has its own geometry; however, KL is agnostic towards the internal geometry of $\mathbb R^n$ and, consequently, the inductive biases associated with it.
+At the heart of modern generative modeling, there is a fundamental tension between two spaces. On **sample space** $\R^d$, Euclidean geometry gives us clean, benign objectives such as $L^2$ mean squared error. On the **space of distributions** $\mathcal P(\R^d)$ maximum likelihood singles out the Kullback-Leibler divergence as the principled objective, and $\mathcal P(\R^d)$ has its own geometry. However, KL is agnostic towards the internal geometry of $\R^d$ and, consequently, the inductive biases associated with it; $D(P\|Q)$ also blows up when $P$'s support is outside of $Q$.
 
 **Optimal transport** provides one of the most mathematically beautiful bridges between the two spaces. It has also become the backbone of modern generative modeling. My personal acquaintance with the field began with [Wasserstein GAN](https://arxiv.org/pdf/1701.07875). In school, [information theory](https://nlyu1.github.io/classical-info-theory/) provided the necessary tools, and I've always been intrigued by the connections between e.g. flow matching, wasserstein gradient flow, and even [renormalization](https://arxiv.org/abs/2202.11737). Motivated by understanding a highly impressive recent work on [drifting models](https://arxiv.org/abs/2602.04770), I decided to write these posts to learn, and unpack, some of the concepts.
 
@@ -16,9 +16,8 @@ This series **builds the optimal transport toolkit from scratch**, with one eye 
 Layout of the posts:
 
 - **Part 0** (this post): the *static* picture — static definition of Wasserstein distance, and the variational dual that empowers Wasserstein-GAN.
-- **[Part 1](/blogs/machine-learning/ot-generative-1-wasserstein-geometry/)**: the *geometric* picture — the Wasserstein distribution manifold, the *dynamic* definition of $W_2$ distance, gradients, geodesics, and flow matching.
-- **[Part 2](/blogs/machine-learning/ot-generative-2-wasserstein-gradients/)**: the *unifying* picture — Benamou-Brenier theorem as the bridge between static and dynamic transport. Conditional and marginal flow matching.
-- **[Part 3](/blogs/machine-learning/ot-generative-3-drifting-models/)**: *application* of the optimal transport perspective to drifting models.
+- **[Part 1](/blogs/machine-learning/ot-generative-1-wasserstein-geometry/)**: the *geometric* picture — the Wasserstein distribution manifold, the *dynamic* definition of $W_2$ distance, and unification with the static picture.
+- **[Part 2](/blogs/machine-learning/ot-generative-2-drifting-models/)**: *application* of the optimal transport perspective to drifting models.
 
 ## Contents
 
@@ -121,15 +120,9 @@ W_1(P, Q) &= \sup_{\varphi, \psi} \left[
 \end{align}
 $$
 
-In this interpretation of the game (minimax guarantees equivalent value), the dual player moves first, and the primal player reacts to minimize their penalty. Note that the value of the $\inf\sup$ and the $\sup\inf$ are the same, the optimizing parameters have changed:
-$$
-\begin{equation}
-\mathcal L(\varphi, \psi) = \inf_{\pi\geq 0} \int \left[\|x-y\| - \varphi(x) - \psi(y)\right]\, d\pi(x, y)
-\label{eq:penalty-explicit}
-\end{equation}
-$$
+In this interpretation of the game (minimax guarantees equivalent value), the dual player moves first, and the primal player reacts to minimize their penalty. Note that the value of the $\inf\sup$ and the $\sup\inf$ are the same — the optimizing parameters have changed.
 
-Looking at $\mathcal L$: if the dual player chose $\varphi, \psi$ such that $\varphi(x) + \psi(y) > \|x-y\|$ anywhere, then the integrand is negative there and the primal player will happily put infinite mass on it, sending $\mathcal L \to -\infty$. Mathematically, **the inner infimum evaluates to an indicator function of the constraint**[^dual-cone]
+Looking at $\mathcal L$ in $\eqref{eq:penalty}$: if the dual player chose $\varphi, \psi$ such that $\varphi(x) + \psi(y) > \|x-y\|$ anywhere, then the integrand is negative there and the primal player will happily put infinite mass on it, sending $\mathcal L \to -\infty$. Mathematically, **the inner infimum evaluates to an indicator function of the constraint**[^dual-cone]
 
 $$
 \mathcal L(\varphi, \psi) = \begin{cases} 0 & \text{if } \varphi(x) + \psi(y) \leq \|x-y\| \text{ for all } x,y \\ -\infty & \text{otherwise} \end{cases}
