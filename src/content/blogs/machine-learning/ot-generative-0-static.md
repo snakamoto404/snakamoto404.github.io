@@ -23,13 +23,13 @@ Layout of the posts:
 ## Contents
 
 - [Static definition of Wasserstein distance](#static-definition-of-wasserstein-distance)
-- [Variational characterization and Wasserstein-GAN](#variational-characterization-and-wasserstein-gan)
+- [Variational characterization, W-GAN (technical)](#variational-characterization-w-gan-technical)
 
 ## Static definition of Wasserstein distance
 
 We work on $\mathbb R^d$. Interpret a probability distribution $P$ on $\mathbb R^d$ as a snapshot of a fluid[^earth] on $\mathbb R^d$, with $P(x)$ denoting the height of water at $x\in \mathbb R^d$; water has uniform density, so the **mass** of water in each region is proportional to the enclosed distribution probability. There, **mass $\leftrightarrow$ probability**.
 
-We trivially associate the **cost** of moving mass $\rho$ from $x$ to $y$ with $\rho (x-y)^2$. You're welcome to pick other powers or cost functions. In plain words:
+We trivially associate the **cost** of moving mass $\rho$ from $x$ to $y$ with $\rho \cdot \|x-y\|^2$. You're welcome to pick other powers or cost functions ($\rho \cdot \|x-y\|$ is another popular one). In plain words:
 
 :::definition
 The **Wasserstein distance** between distributions $P, Q$ is the minimum cost it takes to transport $P$ to $Q$ according to the quadratic cost model above.
@@ -84,33 +84,92 @@ Also recognize the Wasserstein distance as a linear program: the constraints and
 On finite-dimensional spaces, $\Pi(P, Q)$ is represented by doubly-stochastic matrices. Look up Sinkhorn-Knopp and the Birkhoff polytope (convex hull of permutation matrices).
 :::
 
-## Variational characterization and Wasserstein-GAN
+## Variational characterization, W-GAN (technical)
 
-When we say **variational** characterization [^variational] of something, we generally mean writing "something" as a minimum or maximum. Such characterizations are extremely useful because (1) theoretically, they provide bounds, (2) SGD loves extremizing things, and (3) such characterizations provide valuable insight into what the quantity is doing. Recall
+When we say **variational** characterization [^variational] of something, we generally mean writing "something" as a minimum or maximum. Such characterizations are extremely useful because (1) theoretically, they provide bounds, (2) SGD loves extremizing things, and (3) such characterizations provide valuable insight into what the quantity is doing.
+
+### Dual of $W_1$
+
+Let's rewrite the Wasserstein distance $\eqref{eq:w2-static}$, generalized to $c(x, y)$ from $\|x-y\|$, by replacing the hard constraint $\pi \in \Pi(P, Q)$ with nested optimization:
+
+Conceptualize this as an adversarial equilibrium between two players
+
+- the **primal** player controls $\pi$ and wants to minimize $W$ as in $\eqref{eq:w2-static}$ subject to a constraint.
+- Instead of a hard constraint, we equivalently enforce the constraint by introducing an adversarial **dual** who controls $\varphi, \psi$.
+- The dual player can crank up any constraint deviation at $\infty$ cost to the primal player.
+- Note: in nested extremization, since the inner optimization gets to react to the outer-choice as a constant, so chronologically, the **outer operator moves first**.
+
+As a first pass, we give the dual player the power to choose arbitrary $\varphi, \psi$:
+$$
+\begin{equation}
+\begin{split}
+W_c(P, Q) = \inf_{\pi\geq 0} \sup_{\varphi, \psi}\biggl[
+    &\int c(x, y) \, d\pi(x, y) + \int \varphi(x) \left[ dP(x) - d\pi(x, y)\right] \\
+    &+ \int \psi(y) \left[ dQ(y) - d\pi(x, y)\right]
+\biggr]
+\end{split}
+\label{eq:lagrangian}
+\end{equation}
+$$
+
+Let's re-interpret this game by swapping $\inf$ and $\sup$ (regularity conditions needed), regroup,
+and specialize to $c(x, y) = \|x-y\|$ in the $W_1$ distance:
+$$
+\begin{align}
+W_1(P, Q) &= \sup_{\varphi, \psi} \left[
+    \int \varphi\, dP + \int \psi\, dQ + \mathcal L(\varphi, \psi)
+\right] \label{eq:w1-dual-raw} \\
+\mathcal L(\varphi, \psi) &= \inf_{\pi\geq 0} \int \left[\|x-y\| - \varphi(x) - \psi(y)\right]\, d\pi(x, y) \label{eq:penalty}
+\end{align}
+$$
+
+In this interpretation of the game (minimax guarantees equivalent value), the dual player moves first, and the primal player reacts.
+$$
+\begin{equation}
+\mathcal L(\varphi, \psi) = \inf_{\pi\geq 0} \int \left[\|x-y\| - \varphi(x) - \psi(y)\right]\, d\pi(x, y)
+\label{eq:penalty-explicit}
+\end{equation}
+$$
+
+In the end, we would like to rewrite $W_1$ to totally get rid of the infimum over $\pi$ (see $\eqref{eq:kr-dual}$ for a preview):
+- Minimax theorem in game theory: in a zero-sum game, we can rewrite the utility of the constrained primal player (equation ...) equivalently as the utility of the dual player (equation ...).
+- Note that the outside constraint
+- We need suitable constraint on the dual player to reflect the "optimal play" of the primal player, we'll derive it below.
+
+As of now, the poor primal player's opponent is too powerful: even if the primal player dutifully satisfied $\pi \in \Pi(P, Q)$, the dual player can still crank the infimum up to infinity, even though it will be canceled by the beginning $\mathbb E_P\, \varphi$ and $\mathbb E_Q\, \psi$ terms.
+
+
+to $0$ when $\pi$ is compliant, and $\infty$ otherwise.[^dual-cone]
+
+[^dual-cone]: In convex analysis, the precise statement is that the infimum of a linear function over a cone evaluates to the indicator function of the dual cone.
+
+We can verify that "the right amount of power" to give the dual player is to allow them to pick over 1-Lipschitz functions.
 
 :::definition
 A function $f : \R^d \to \R$ is **$1$-Lipschitz** if for all $x, y \in \R^d$, $|f(x) - f(y)| \le \|x - y\|$.
 We write $\mrm{Lip}_1$ for the set of all such functions.
 :::
 
-The key insight is that $W_1$ — the Wasserstein-1 distance (replace $\|x-y\|^2$ with $\|x-y\|$ in \eqref{eq:w2-static}) — admits a clean dual formulation.
+Why? Staring at $\eqref{eq:penalty-explicit}$, let the dual player choose $\varphi = \psi$ as the 1-Lipschitz function.
+- When the primal player is compliant, the original form $\eqref{eq:lagrangian}$ guarantees that $W_c(P, Q)$ equals the Kantorovich definition $\eqref{eq:w2-static}$; in this case, the 1-Lipschitz condition guarantees that $\mathcal L(\pi, \varphi, \psi)=0$.
+- When the primal player is non-compliant at $P(x)$ (w.l.o.g $P, Q$ are symmetric),
 
-:::theorem[Kantorovich-Rubinstein duality]
+Rearranging, we obtain the **Kantorovich-Rubinstein dual** of $W_1$ (similar result exists for $W_2$):
 $$
-W_1(P, Q) = \sup_{f \in \mrm{Lip}_1} \left[ \E_{x \sim P}\, f(x) - \E_{y \sim Q}\, f(y) \right].
+\begin{equation}
+W_1(P, Q) = \sup_{\varphi\in \mrm{Lip}_1} \left[\int \varphi\, dP + \int \psi\, dQ\right] = \sup_{\varphi\in \mrm{Lip}_1} \left[\E_P\, \varphi - \E_Q \, \varphi\right]
+\label{eq:kr-dual}
+\end{equation}
 $$
-:::
-
-In words: instead of searching over couplings (the primal / static formulation), we search over $1$-Lipschitz "critic" functions. The supremum is attained by the function that best separates $P$ from $Q$ — subject to the smoothness constraint.
 
 :::remark
-Why does this matter for generative modeling? Consider training a generator $G_\theta$ that pushes a noise distribution $Z$ toward data $P_{\mrm{data}}$. Let $Q_\theta = G_{\theta\#} Z$ be the generated distribution. Then
+Why does this matter for generative modeling? Consider training a generator $G_\theta$ that pushes a noise distribution $p_{\mrm{noise}}$ toward data $p_{\mrm{data}}$. Let $p_\theta = G_{\theta\#} p_{\mrm{noise}}$ be the generated distribution. Then
 
 $$
-W_1(P_{\mrm{data}}, Q_\theta) = \sup_{f \in \mrm{Lip}_1} \left[ \E_{x \sim P_{\mrm{data}}}\, f(x) - \E_{y \sim Q_\theta}\, f(y) \right].
+W_1(p_{\mrm{data}}, p_\theta) = \sup_{f \in \mrm{Lip}_1} \left[ \E_{x \sim p_{\mrm{data}}}\, f(x) - \E_{y \sim p_\theta}\, f(y) \right].
 $$
 
-This is exactly the [**Wasserstein-GAN**](https://arxiv.org/pdf/1701.07875) (WGAN) objective: train a neural-network critic $f_w$ to approximate the supremum, and train $G_\theta$ to minimize the resulting distance. The Lipschitz constraint is enforced by weight clipping or gradient penalty. Compared to the original GAN's Jensen-Shannon divergence, $W_1$ provides gradients even when the supports of $P_{\mrm{data}}$ and $Q_\theta$ don't overlap — which is precisely the mode-collapse pathology that plagued early GANs.
+This is exactly the [**Wasserstein-GAN**](https://arxiv.org/pdf/1701.07875) (WGAN) objective: train a neural-network critic $f_w$ to approximate the supremum, and train $G_\theta$ to minimize the resulting distance. The Lipschitz constraint is enforced by weight clipping or gradient penalty. Compared to the original GAN's Jensen-Shannon divergence, $W_1$ provides gradients even when the supports of $p_{\mrm{data}}$ and $p_\theta$ don't overlap — which is precisely the mode-collapse pathology that plagued early GANs.
 :::
 
 [remark: connection to TV] (don't modify yet)

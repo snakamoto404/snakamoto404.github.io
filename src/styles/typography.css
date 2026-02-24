@@ -96,9 +96,9 @@
     mjx-container[jax="SVG"][display="true"] {
       @apply my-6 max-w-full overflow-x-auto overflow-y-hidden;
       margin-inline: auto;
-      width: fit-content;
+      width: 100%;
       display: block;
-      text-align: left;
+      text-align: center;
       -webkit-overflow-scrolling: touch;
     }
   }

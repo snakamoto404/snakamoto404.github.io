@@ -2,10 +2,10 @@ import { defineConfig } from 'astro/config';
 import sitemap from '@astrojs/sitemap';
 import tailwindcss from '@tailwindcss/vite';
 import remarkMath from 'remark-math';
-import rehypeMathjax from 'rehype-mathjax';
 import rehypeSlug from 'rehype-slug';
 import remarkDirective from 'remark-directive';
 import { remarkTheorem } from './src/plugins/remark-theorem.mjs';
+import rehypeMathjaxTwoPass from './src/plugins/rehype-mathjax-two-pass.mjs';
 
 export default defineConfig({
   site: 'https://snakamoto404.github.io',
@@ -22,7 +22,7 @@ export default defineConfig({
     remarkPlugins: [remarkMath, remarkDirective, remarkTheorem],
     rehypePlugins: [
       rehypeSlug,
-      [rehypeMathjax, {
+      [rehypeMathjaxTwoPass, {
         tex: {
           tags: "ams",
           macros: {
