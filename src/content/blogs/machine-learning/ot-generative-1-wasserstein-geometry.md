@@ -105,7 +105,10 @@ Up to a factor of $1/2$, **the Wasserstein length of a curve $\gamma:[0, 1]\to \
 :::definition[Dynamical definition of $W_2$]
 The Wasserstein-2 distance between $P, Q\in \mathcal W_2$ is equivalently the minimum fluid action between configurations $P$ and $Q$:
 $$
-W_2^2(P, Q) = \inf_{\rho_t,\, v_t} \int_0^1\int_{\R^n} \rho_t(x)\,\|v_t(x)\|^2\, dx\, dt
+\begin{equation}
+W_2^2(P, Q) = \inf_{\rho_t,\, v_t} \int_0^1\!\!\int_{\R^n} \rho_t(x)\,\|v_t(x)\|^2\, dx\, dt
+\label{eq:w2-dynamical}
+\end{equation}
 $$
 
 $$
