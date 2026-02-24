@@ -1,5 +1,5 @@
 ---
-title: "OT for generative modeling 3 — drifting models"
+title: "OT for generative modeling 3 — wasserstein gradients and drifting models"
 date: 2026-02-23
 summary: "Part 3 of a series on optimal transport in generative models. We formulate Kaiming He et al.'s Drifting Models, interpret the antisymmetric drifting field as Wasserstein gradient flow on a kernelized discrepancy, and draw the connection to maximum likelihood estimation."
 ---

@@ -7,8 +7,8 @@ summary: "Part 1 of a series on optimal transport in generative models. We const
 In [Part 0](/blogs/machine-learning/ot-generative-0-static/) we defined the Wasserstein distance: the cheapest way to rearrange one distribution into another. We now know *how much* it costs to move mass. But that framing treats distributions as static objects — you compare two of them, get a number, and that was it. However, transport is an inherently dynamical process; recall our water analogy, probability distributions can continuously flow. Guiding questions for this section:
 
 - <span class="question">How to describe the dynamical aspects of transport?</span> We need the geometric structure of a manifold: distributions as points, velocity fields as tangent vectors, and an inner product. We'll carefully disentangle the **sample domain** $\R^n$ from the **distribution manifold** $\mathcal{W}_2$.
-- <span class="question">What is this term "Wasserstein Gradient Flow"?</span> Otto calculus lets us compute gradients of functionals over distributions; these gradients manifest as vector fields on $\R^n$. The Fokker-Planck equation falls out as a corollary.
-- <span class="question">How is the static $W_2$ definition in [Part 0](/blogs/machine-learning/ot-generative-0-static/) related to the continuous evolution of probability distributions?</span> The Benamou-Brenier formula shows that $W_2$ is the geodesic distance on $\mathcal{W}_2$: a nested action decomposition connecting static coupling costs to dynamical kinetic energy.
+<!-- - <span class="question">What is this term "Wasserstein Gradient Flow"?</span> Otto calculus lets us compute gradients of functionals over distributions; these gradients manifest as vector fields on $\R^n$. The Fokker-Planck equation falls out as a corollary. -->
+- <span class="question">How is the static $W_2$ definition in [part 0](/blogs/machine-learning/ot-generative-0-static/) related to the continuous evolution of probability distributions?</span> The Benamou-Brenier formula shows that $W_2$ is the geodesic distance on $\mathcal{W}_2$: a nested action decomposition connecting static coupling costs to dynamical kinetic energy.
 
 Part 1 is notably denser than part 0, but also much the more beautiful. From now on, we focus on $W_2$ with quadratic penalty; we'll see physics meet statistics: the continuity equation in action, the Fokker-Planck equation falling out as a corollary, and the free-particle Lagrangian action providing the key bridge between static and dynamical perspectives on optimal transport.
 
@@ -74,7 +74,7 @@ What's a natural metric on $\mathcal W_2$ for two tangent vectors at density $\r
 
 :::definition[Wasserstein metric]
 $$
-    \la u, v\ra_\rho = \int_{\R^n} \la u(x),\, v(x)\ra\; \rho(x)\, dx = \int_{\R^n} \la \nabla\varphi(x),\, \nabla\psi(x)\ra\; \rho(x)\, dx
+    \la u, v\ra_\rho = \int_{\R^n} \rho(x)\cdot \la u(x),\, v(x)\ra\, dx = \int_{\R^n} \rho\cdot \la \nabla\varphi,\, \nabla\psi\ra\, dx
 $$
 :::
 
@@ -123,27 +123,30 @@ $$
 
 There's an elephant in the room: we have the [static definition of Wasserstein distance](/blogs/machine-learning/ot-generative-0-static/#eq-w2-static) and the dynamical definition $\eqref{eq:w2-dynamical}$, and they had better agree. The Kantorovich formulation optimizes over transport plans; the Riemannian formulation optimizes over fluid flows. Beautiful theories should have unique, canonical definitions — and these two are the same.
 
-The unifying result is the **Benamou-Brenier theorem**. The key engine is a clean decomposition: solve the single-particle action problem, then optimize the transport plan. The dynamical fluid action decomposes into two nested infima. This theorem is pivotal because **it identifies the optimal transport plan that realizes the Wasserstein distance** — the engine at the heart of flow matching. We provide the result first:
+The unifying result is the **Benamou-Brenier theorem**. This theorem is pivotal because **it identifies the linear optimal transport plan that realizes the Wasserstein distance** — the engine at the heart of flow matching.
 
-
-:::theorem
-
-Benamou-Brenier
-The Kantorovich and differential geometry definitions coincide:
+:::theorem[Benamou-Brenier]
+The Kantorovich (static) and Riemannian (dynamical) definitions of $W_2$ coincide:
 $$
+\begin{aligned}
     W_2^2(P, Q)
-    &= \inf_{\pi \in \Pi(P, Q)}...
-    &= ...
+    &= \inf_{\pi \in \Pi(P, Q)} \int_{\R^n\times\R^n} \|y - x\|^2\, d\pi(x, y) \\
+    &= \inf_{\substack{\rho_t,\, v_t \\ \pd t\rho + \nabla\cdot(\rho v) = 0 \\ \rho_0=P,\;\rho_1=Q}} \int_0^1\!\!\int_{\R^n} \rho_t\,\|v_t\|^2\, dx\, dt
+    \label{eq:benamou-brenier}
+\end{aligned}
 $$
-Given the static optimal coupling $\pi(x, y)$, the conditional flow vector field consists of pointwise
+The optimum of the dynamical formulation is achieved by straight-line transport under the optimal plan $\pi^*$: each mass element $(x, y)\sim\pi^*$ follows trajectory $\gamma(t) = (1-t)\,x + t\,y$ with velocity $y - x$. The optimal marginal velocity field is
 $$
-    v_t(z\mid y) = t \left(\int ...\right) + (1-t) ...
-$$
-The marginal flow vector field is
-$$
-...
+    v_t^*(z) = \E_{\pi^*}\!\left[y - x \;\middle|\; (1-t)\,x + t\,y = z\right]
 $$
 :::
+
+We state the result first, then prove it in four steps:
+
+1. [Single-particle least action](#single-particle-least-action): Euler-Lagrange gives straight-line trajectories with the static quadratic cost $\|y - x\|^2$.
+2. [Single-particle transport plans](#boundary-conditions-vs-transport-plans): a transport plan $\pi$ assigns endpoints to each mass element; classical mechanics takes over.
+3. [The nested decomposition](#the-nested-decomposition): the macroscopic particle ensemble action splits into an inner infimum over single-particle trajectories, and outer infimum over coupling plans, recovering the static definition.
+4. [From particle ensemble to fluid](#from-particles-to-fluid): the marginal velocity field is the conditional expectation of particle velocities; a variance-drop argument shows particle ensemble and fluid actions coincide for $\pi^*$.
 
 ### Single-particle least action
 
@@ -161,7 +164,7 @@ $$
 
 Now scale up to the fluid. The **boundary conditions** are the marginal distributions: $P$ at $t=0$ and $Q$ at $t=1$. The fluid-level boundary condition is underspecified: it tells us the shape of the final distributions, but not **which densities go where**. Infinitely many arrangements are compatible.
 
-The transport plan **transport plan** $\pi \in \Pi(P, Q)$ resolves this ambiguity. It's a coupling that assigns specific endpoints to every infinitesimal unit of mass: "$\pi(x, y)$ mass travels from $x$ to $y$." Once a plan is fixed, classical mechanics takes over — every mass element independently follows its own Euler-Lagrange straight-line path.
+A **transport plan** $\pi \in \Pi(P, Q)$ resolves this ambiguity. It's a coupling that assigns specific endpoints to every infinitesimal unit of mass: "$\pi(x, y)$ mass travels from $x$ to $y$." Once a plan is fixed, classical mechanics takes over — every mass element independently follows its own Euler-Lagrange straight-line path.
 
 ### The nested decomposition
 
