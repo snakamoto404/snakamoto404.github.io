@@ -30,7 +30,7 @@ Layout of the posts:
 
 We work on $\mathbb R^d$. Interpret a probability distribution $\rho$ on $\mathbb R^d$ as a snapshot of a fluid[^earth] on $\mathbb R^d$, with $f_\rho(x)$ denoting the height of water at $x\in \mathbb R^d$; water has uniform density, so the mass of water in each region is proportional to the enclosed distribution probability.
 
-[^earth]: "Earth-moving" language is historically standard, but we will prefer the fluid metaphor because later sections use velocity fields, momentum, and continuity equations.
+[^earth]: or "earth," suggested by the earth-moving terminology. But we'll be talking about momentum later, so water seems to make more sense.
 
 ## The static formulation
 
