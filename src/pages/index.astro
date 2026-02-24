@@ -13,22 +13,22 @@ const latestBlogs = [...blogEntries]
   .slice(0, 5);
 
 const homeDescription =
-  'Romulus by Nakamoto Satoshi: research feed archive and blogs on agentic programming, machine learning, and quantitative systems.';
+  'Snakamoto by Nakamoto Satoshi: research feed archive and blogs on agentic programming, machine learning, and quantitative systems.';
 
 const websiteStructuredData = {
   '@context': 'https://schema.org',
   '@type': 'WebSite',
-  name: 'Romulus',
+  name: 'Snakamoto',
   alternateName: ['snakamoto404', 'Nakamoto Satoshi'],
   url: Astro.site ? Astro.site.toString() : Astro.url.origin,
   description: homeDescription
 };
 ---
 
-<BaseLayout title="Home | Romulus" description={homeDescription} structuredData={websiteStructuredData}>
+<BaseLayout title="Home | Snakamoto" description={homeDescription} structuredData={websiteStructuredData}>
   <section class="space-y-6">
     <div class="space-y-2">
-      <h1 class="text-3xl font-semibold tracking-tight">Romulus</h1>
+      <h1 class="text-3xl font-semibold tracking-tight">Snakamoto</h1>
     </div>
 
     <section class="space-y-3">

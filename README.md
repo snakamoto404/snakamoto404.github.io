@@ -1,4 +1,4 @@
-# Romulus — snakamoto404.github.io
+# Snakamoto — snakamoto404.github.io
 
 Astro static site scaffolded for GitHub Pages user-site hosting.
 

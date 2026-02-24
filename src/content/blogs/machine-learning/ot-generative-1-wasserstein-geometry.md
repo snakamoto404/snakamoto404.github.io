@@ -121,9 +121,29 @@ $$
 
 ## Unifying static and dynamical perspectives
 
-There's an elephant in the room: we have the [static definition (Part 0, Eq. (1))](/blogs/machine-learning/ot-generative-0-static/#eq-w2-static) and the dynamical definition $\eqref{eq:w2-dynamical}$, and they had better agree. The Kantorovich formulation optimizes over transport plans; the Riemannian formulation optimizes over fluid flows. Beautiful theories should have unique, canonical definitions — and these two are the same.
+There's an elephant in the room: we have the [static definition of Wasserstein distance](/blogs/machine-learning/ot-generative-0-static/#eq-w2-static) and the dynamical definition $\eqref{eq:w2-dynamical}$, and they had better agree. The Kantorovich formulation optimizes over transport plans; the Riemannian formulation optimizes over fluid flows. Beautiful theories should have unique, canonical definitions — and these two are the same.
 
-The unifying result is the **Benamou-Brenier theorem**. The key engine is a clean decomposition: solve the single-particle action problem (Euler-Lagrange), then optimize the transport plan (Kantorovich). The dynamical fluid action decomposes into two nested infima. This is pivotal because **it identifies the optimal transport plan that realizes the Wasserstein distance** — the engine at the heart of flow matching.
+The unifying result is the **Benamou-Brenier theorem**. The key engine is a clean decomposition: solve the single-particle action problem, then optimize the transport plan. The dynamical fluid action decomposes into two nested infima. This theorem is pivotal because **it identifies the optimal transport plan that realizes the Wasserstein distance** — the engine at the heart of flow matching. We provide the result first:
+
+
+:::theorem
+
+Benamou-Brenier
+The Kantorovich and differential geometry definitions coincide:
+$$
+    W_2^2(P, Q)
+    &= \inf_{\pi \in \Pi(P, Q)}...
+    &= ...
+$$
+Given the static optimal coupling $\pi(x, y)$, the conditional flow vector field consists of pointwise
+$$
+    v_t(z\mid y) = t \left(\int ...\right) + (1-t) ...
+$$
+The marginal flow vector field is
+$$
+...
+$$
+:::
 
 ### Single-particle least action
 
@@ -189,4 +209,6 @@ $$
     \underbrace{\E_\pi \|\dot x\|^2}_{\text{particle action}} \;=\; \underbrace{\int \rho_t \|v_t\|^2\, dx}_{\text{fluid action}} \;+\; \underbrace{\int \rho_t\,\mrm{Var}[\dot x \mid x(t) = x]\, dx}_{\geq\, 0}
 $$
 
-**Fluid action is upper-bounded by particle ensemble action**. Equality holds when the variance vanishes — i.e., when **no two particles cross at the same point at the same time with different velocities**. Under the optimal transport plan $\pi^*$, this is guaranteed by cyclical monotonicity: if trajectories crossed, swapping their destinations would reduce total cost. Therefore, for the optimal plan, particle and fluid actions coincide exactly, completing the bridge.
+**Fluid action is upper-bounded by particle ensemble action**. Equality holds when the variance vanishes — i.e., when **no two particles cross at the same point at the same time with different velocities**. Under the optimal transport plan $\pi^*$, this is guaranteed by cyclical monotonicity: if two particles' trajectories crossed, swapping their destinations would reduce total cost [^cyclicality]. Therefore, for the optimal plan, particle and fluid actions coincide exactly, completing the bridge.
+
+[^cyclicality]: Minimal-cost implies that for any two support pairs $(a_1, b_1), (a_2, b_2)$, $\|b_1-a_1\|^2+\|b_2-a_2\|^2 \le \|b_2-a_1\|^2+\|b_1-a_2\|^2$, equivalently $\langle a_1-a_2,\; b_1-b_2\rangle \ge 0$. You can draw some diagrams to convince yourself that this implies no crossing.

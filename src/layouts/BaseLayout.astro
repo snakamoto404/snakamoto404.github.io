@@ -12,7 +12,7 @@ interface Props {
 
 const {
   title,
-  description = 'Daily feed archive by Romulus',
+  description = 'Daily feed archive by Snakamoto',
   ogType = 'website',
   ogImage,
   twitterCard = 'summary_large_image',
@@ -22,7 +22,7 @@ const {
 const pathname = Astro.url.pathname;
 const canonicalUrl = Astro.site ? new URL(pathname, Astro.site).toString() : Astro.url.toString();
 const absoluteOgImage = ogImage ? (Astro.site ? new URL(ogImage, Astro.site).toString() : ogImage) : undefined;
-const siteName = 'Romulus';
+const siteName = 'Snakamoto';
 
 const navItems = [
   { href: '/', label: 'Home' },
@@ -74,7 +74,7 @@ const isActivePath = (href: string) => {
     <header class="border-b border-border/80 bg-background/95 backdrop-blur">
       <div class="app-layout py-5">
         <div class="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-          <a href="/" class="text-lg font-semibold tracking-tight">Romulus</a>
+          <a href="/" class="text-lg font-semibold tracking-tight">Snakamoto</a>
           <nav aria-label="Main navigation" class="-mx-1 flex flex-wrap items-center gap-x-1 gap-y-2 text-sm">
             {
               navItems.map((item) => (
