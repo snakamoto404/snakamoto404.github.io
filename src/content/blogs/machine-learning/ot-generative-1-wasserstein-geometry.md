@@ -121,7 +121,7 @@ $$
 
 ## Unifying static and dynamical perspectives
 
-There's an elephant in the room: we have the [static definition](/blogs/machine-learning/ot-generative-0-static/) $\eqref{eq:w2-static}$ and the dynamical definition $\eqref{eq:w2-dynamical}$, and they had better agree. The Kantorovich formulation optimizes over transport plans; the Riemannian formulation optimizes over fluid flows. Beautiful theories should have unique, canonical definitions — and these two are the same.
+There's an elephant in the room: we have the [static definition (Part 0, Eq. (1))](/blogs/machine-learning/ot-generative-0-static/#eq-w2-static) and the dynamical definition $\eqref{eq:w2-dynamical}$, and they had better agree. The Kantorovich formulation optimizes over transport plans; the Riemannian formulation optimizes over fluid flows. Beautiful theories should have unique, canonical definitions — and these two are the same.
 
 The unifying result is the **Benamou-Brenier theorem**. The key engine is a clean decomposition: solve the single-particle action problem (Euler-Lagrange), then optimize the transport plan (Kantorovich). The dynamical fluid action decomposes into two nested infima. This is pivotal because **it identifies the optimal transport plan that realizes the Wasserstein distance** — the engine at the heart of flow matching.
 
@@ -135,48 +135,58 @@ Plugging back, the minimum action of this single particle is exactly
 $$
     S^*(x_0, x_1) = \|x_1 - x_0\|^2
 $$
-(dropping the conventional $1/2$). This is the quadratic cost from Part 0.
+(dropping the conventional $1/2$). This is another perspective on **the quadratic static cost** from Part 0, i.e. the minimal action of free-particle travel between two endpoints.
 
 ### Boundary conditions vs. transport plans
 
-Now scale up to the fluid. The **boundary conditions** are the marginal distributions: $P$ at $t=0$ and $Q$ at $t=1$. Think of $P$ as a pile of sand and $Q$ as a hole. The boundary conditions tell you the shape of each, but **not which grain goes where**. Infinitely many rearrangements are compatible.
+Now scale up to the fluid. The **boundary conditions** are the marginal distributions: $P$ at $t=0$ and $Q$ at $t=1$. The fluid-level boundary condition is underspecified: it tells us the shape of the final distributions, but not **which densities go where**. Infinitely many arrangements are compatible.
 
-A **transport plan** $\pi \in \Pi(P, Q)$ resolves this ambiguity. It's a coupling that assigns specific endpoints to every infinitesimal unit of mass: "$\pi(x, y)$ mass travels from $x$ to $y$." Once a plan is fixed, classical mechanics takes over — every mass element independently follows its own Euler-Lagrange straight-line path.
+The transport plan **transport plan** $\pi \in \Pi(P, Q)$ resolves this ambiguity. It's a coupling that assigns specific endpoints to every infinitesimal unit of mass: "$\pi(x, y)$ mass travels from $x$ to $y$." Once a plan is fixed, classical mechanics takes over — every mass element independently follows its own Euler-Lagrange straight-line path.
 
 ### The nested decomposition
 
-Here is the core of Benamou-Brenier. The dynamical fluid action decomposes into two nested minimization problems:
+Here is the core of Benamou-Brenier. Let's first consider the dynamical fluid as a macroscopic ensemble of particles, its action decomposes into two nested minimization problems:
 
 $$
-\begin{equation}
-W_2^2(P, Q) \;=\; \inf_{\pi \in \Pi(P, Q)}\; \int_{\R^n\times \R^n} \left[\;\inf_{\substack{x(t):\; x(0)=x_0 \\ x(1)=x_1}} \int_0^1 \|\dot x(t)\|^2\, dt\;\right] d\pi(x_0, x_1)
+\begin{aligned}
+S_{\text{fluid as particles}}^* &= \int_{\R^n\times \R^n} \left[\inf_{\substack{\gamma(t):\; \gamma(0)=x \\ \gamma(1)=y}} \int_0^1 \|\dot \gamma(t)\|^2\, dt\;\right] d\pi(x, y) \\
+&= \inf_{\pi \in \Pi(P, Q)}\; \int \|x-y\|^2 d\pi(x, y)
+= W_2^2(P, Q)
 \label{eq:nested-action}
-\end{equation}
+\end{aligned}
 $$
 
-1. **Inner infimum (classical mechanics):** Fix endpoints $(x_0, x_1)$ from the plan. The action-minimizing trajectory is a straight line; the resulting cost is $\|x_1 - x_0\|^2$.
-2. **Outer infimum (static OT):** Substitute the inner solution. What remains is $\inf_\pi \int \|x_0 - x_1\|^2\, d\pi$ — precisely the static Kantorovich definition $\eqref{eq:w2-static}$.
+1. **Inner infimum (classical mechanics):** Fix endpoints $(x, y)$ from the plan. The action-minimizing trajectory is a straight line; the resulting cost is $\|y-x\|^2$.
+2. **Outer infimum (static OT):** Substitute the inner solution. What remains is $\inf_\pi \int \|x_0 - x_1\|^2\, d\pi$ — precisely the [static Kantorovich definition in Part 0](/blogs/machine-learning/ot-generative-0-static/#eq-w2-static).
 
-Three viewpoints, one quantity:
+There're three beautifully interleaved viewpoints at work here:
 
-- **Static OT** is the outer infimum alone. It asks: given $P$ and $Q$, what plan minimizes aggregate pairwise cost? Time is absent.
-- **Classical mechanics** is the inner infimum alone. It asks: given fixed endpoints, what path minimizes action?
+- **Static OT** is the outer infimum alone. It asks: given $P$ and $Q$, what plan minimizes aggregate pairwise cost? Time and dynamics are absent.
+- **Classical mechanics** is the inner infimum alone. It asks: fixing endpoints and mass, what path minimizes action?
 - **Dynamic OT** is both simultaneously. Minimizing the global fluid action discovers the optimal particle trajectories *and* the optimal transport plan that binds them.
 
 ### From particles to fluid
 
-There remains a subtle gap: we decomposed the action into individual particle costs under a plan $\pi$, but the dynamical definition $\eqref{eq:w2-dynamical}$ is written in terms of a macroscopic velocity field $v_t$, not individual particle trajectories. How do we reconcile the Lagrangian (particle) and Eulerian (fluid) perspectives?
+There remains a subtle yet important gap: we decomposed the action into individual particle costs under a plan $\pi$, but the dynamical definition $\eqref{eq:w2-dynamical}$ is written in terms of a macroscopic velocity field $v_t$, not individual particle trajectories. How do we reconcile the particle and fluid perspectives?
 
-Given a transport plan $\pi$, each mass element follows its straight-line trajectory $x(t) = (1-t)x_0 + tx_1$ with velocity $\dot x = x_1 - x_0$. Multiple particles may pass through the same point $x$ at time $t$, potentially with different velocities. The macroscopic Eulerian velocity $v_t(x)$ is the **conditional expectation** of particle velocities given position:
+:::remark
+
+This reconciliation is the key engine behind being able to optimize the desired marginal flow matching objective using the tractable conditional flow matching objective.
+:::
+
+Given a transport plan $\pi$, each mass element follows its straight-line trajectory $x(t) = (1-t)x_0 + tx_1$ with velocity $\dot x = x_1 - x_0$. Multiple particles may pass through the same point $x$ at time $t$, potentially with different velocities. The momentum density and mass density at $x$ at time $t$ is:
+
+$$
+    \mu_t(x) = \int 1_{ty + (1-t) z = x} (z-y)\, d\pi(y, z), \quad \rho_t(x) = \int 1_{ty + (1-t)z = x}\, d\pi(y, z)
+$$
+Divide the two to get the macroscopic fluid velocity, which turns out to be the **conditional expectation** of particle velocities given position:
 $$
     v_t(x) = \E[\dot x \mid x(t) = x]
 $$
 
-By the law of total variance[^jensen], the total Lagrangian (particle) action decomposes as:
+By the law of total variance (bias-variance tradeoff on other contexts), the total particle action decomposes as:
 $$
-    \underbrace{\E_\pi\!\left[\|\dot x\|^2\right]}_{\text{particle action}} \;=\; \underbrace{\int \rho_t(x)\,\|v_t(x)\|^2\, dx}_{\text{fluid action}} \;+\; \underbrace{\int \rho_t(x)\,\mrm{Var}[\dot x \mid x(t) = x]\, dx}_{\geq\, 0}
+    \underbrace{\E_\pi \|\dot x\|^2}_{\text{particle action}} \;=\; \underbrace{\int \rho_t \|v_t\|^2\, dx}_{\text{fluid action}} \;+\; \underbrace{\int \rho_t\,\mrm{Var}[\dot x \mid x(t) = x]\, dx}_{\geq\, 0}
 $$
 
-The fluid action is always $\leq$ the particle action. Equality holds when the variance vanishes — i.e., when **no two particles cross at the same point at the same time with different velocities**. Under the optimal transport plan $\pi^*$, this is guaranteed by cyclical monotonicity: if trajectories crossed, swapping their destinations would reduce total cost. Therefore, for the optimal plan, particle and fluid actions coincide exactly, completing the bridge.
-
-[^jensen]: Equivalently, Jensen's inequality: $\|\E[X]\|^2 \leq \E[\|X\|^2]$.
+**Fluid action is upper-bounded by particle ensemble action**. Equality holds when the variance vanishes — i.e., when **no two particles cross at the same point at the same time with different velocities**. Under the optimal transport plan $\pi^*$, this is guaranteed by cyclical monotonicity: if trajectories crossed, swapping their destinations would reduce total cost. Therefore, for the optimal plan, particle and fluid actions coincide exactly, completing the bridge.

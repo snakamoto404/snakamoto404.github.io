@@ -61,6 +61,8 @@ A joint distribution $\pi \in \Pi(P, Q)$ denotes that **we will transport $\pi(x
 :::definition
 The **Wasserstein-2 distance** between $P$ and $Q$ is
 
+<span id="eq-w2-static"></span>
+
 $$
 \begin{equation}
 W_2^2(P, Q) \;=\; \inf_{\pi \in \Pi(P, Q)} \int_{\R^d \times \R^d} \|x - y\|^2 \, d\pi(x, y).
