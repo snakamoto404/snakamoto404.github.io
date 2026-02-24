@@ -43,6 +43,16 @@ export default defineConfig({
     ],
   },
   vite: {
-    plugins: [tailwindcss()]
+    plugins: [tailwindcss()],
+    server: {
+      watch: {
+        // Coalesce multi-event editor saves (add/change bursts) so content reloads
+        // only after the file is stable, avoiding stale markdown parse races.
+        awaitWriteFinish: {
+          stabilityThreshold: 250,
+          pollInterval: 50
+        }
+      }
+    }
   }
 });
