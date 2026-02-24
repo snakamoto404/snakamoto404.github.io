@@ -63,9 +63,11 @@ function createRenderer(options) {
 }
 
 export default function rehypeMathjaxTwoPass(options = EMPTY_OPTIONS) {
-  const renderer = createRenderer(options);
-
   return function transformer(tree) {
+    // MathJax TeX/SVG docs keep internal state (labels/counters/macros). In dev
+    // watch mode, reusing one renderer across transforms can leak state between
+    // reloads and produce flaky equation output. Create a fresh renderer per tree.
+    const renderer = createRenderer(options);
     let found = false;
     let context = tree;
     const rerenderQueue = [];
