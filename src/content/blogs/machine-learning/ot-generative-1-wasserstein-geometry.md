@@ -1,7 +1,7 @@
 ---
 title: "OT for generative modeling 1 — the Wasserstein geometry"
 date: 2026-02-23
-summary: "Part 1 of a series on optimal transport in generative models. We construct the Wasserstein manifold from first principles: probability distributions as points, vector fields as tangent vectors, and the density-weighted inner product that turns optimal transport into Riemannian geometry."
+summary: "We construct the Wasserstein manifold from first principles: probability distributions as points, vector fields as tangent vectors, and the density-weighted inner product that turns optimal transport into Riemannian geometry."
 ---
 
 In [Part 0](/blogs/machine-learning/ot-generative-0-static/) we defined the Wasserstein distance: the cheapest way to rearrange one distribution into another. We now know *how much* it costs to move mass. But that framing treats distributions as static objects — you compare two of them, get a number, and that was it. However, transport is an inherently dynamical process; recall our water analogy, probability distributions can continuously flow. Guiding questions for this section:
