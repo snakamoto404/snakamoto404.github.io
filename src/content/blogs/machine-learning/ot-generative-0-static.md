@@ -96,7 +96,7 @@ Conceptualize this as an adversarial equilibrium between two players
 
 - the **primal** player controls $\pi$ and wants to minimize $W$ as in $\eqref{eq:w2-static}$ subject to a constraint.
 - Instead of a hard constraint, we equivalently enforce the constraint by introducing an adversarial **dual** who controls $\varphi, \psi$.
-- The dual player can crank up any constraint deviation at $\infty$ cost to the primal player.
+- The dual player can crank up any constraint deviation at $\infty$ cost to the primal player. This theme will appear very shortly, **$\infty$ penalty is used consistently in nested extremization to enforce constraints**.
 - Note: in nested extremization, since the inner optimization gets to react to the outer-choice as a constant, so chronologically, the **outer operator moves first**.
 
 As a first pass, we give the dual player the power to choose arbitrary $\varphi, \psi$:
@@ -123,7 +123,7 @@ W_1(P, Q) &= \sup_{\varphi, \psi} \left[
 \end{align}
 $$
 
-In this interpretation of the game (minimax guarantees equivalent value), the dual player moves first, and the primal player reacts.
+In this interpretation of the game (minimax guarantees equivalent value), the dual player moves first, and the primal player reacts to minimize their penalty. Note that the value of the $\inf\sup$ and the $\sup\inf$ are the same, the optimizing parameters have changed:
 $$
 \begin{equation}
 \mathcal L(\varphi, \psi) = \inf_{\pi\geq 0} \int \left[\|x-y\| - \varphi(x) - \psi(y)\right]\, d\pi(x, y)
@@ -131,33 +131,31 @@ $$
 \end{equation}
 $$
 
-In the end, we would like to rewrite $W_1$ to totally get rid of the infimum over $\pi$ (see $\eqref{eq:kr-dual}$ for a preview):
-- Minimax theorem in game theory: in a zero-sum game, we can rewrite the utility of the constrained primal player (equation ...) equivalently as the utility of the dual player (equation ...).
-- Note that the outside constraint
-- We need suitable constraint on the dual player to reflect the "optimal play" of the primal player, we'll derive it below.
+Looking at $\mathcal L$: if the dual player chose $\varphi, \psi$ such that $\varphi(x) + \psi(y) > \|x-y\|$ anywhere, then the integrand is negative there and the primal player will happily put infinite mass on it, sending $\mathcal L \to -\infty$. Mathematically, **the inner infimum evaluates to an indicator function of the constraint**[^dual-cone]
 
-As of now, the poor primal player's opponent is too powerful: even if the primal player dutifully satisfied $\pi \in \Pi(P, Q)$, the dual player can still crank the infimum up to infinity, even though it will be canceled by the beginning $\mathbb E_P\, \varphi$ and $\mathbb E_Q\, \psi$ terms.
+$$
+\mathcal L(\varphi, \psi) = \begin{cases} 0 & \text{if } \varphi(x) + \psi(y) \leq \|x-y\| \text{ for all } x,y \\ -\infty & \text{otherwise} \end{cases}
+$$
 
+[^dual-cone]: In convex analysis, $\inf_{\pi \geq 0} \int f\, d\pi$ equals $0$ if $f \geq 0$ everywhere and $-\infty$ otherwise. This is the support function of the nonnegative-measure cone, equivalently the (negative) indicator of its dual cone $\{f : f \geq 0\}$.
 
-to $0$ when $\pi$ is compliant, and $\infty$ otherwise.[^dual-cone]
+Because the dual player is trying to maximize the overall objective, they'll avoid any choices that trigger $\infty$ penalty. Therefore, we can safely restrict the domain of the supremum to the subset of functions where the penalty is zero:
 
-[^dual-cone]: In convex analysis, the precise statement is that the infimum of a linear function over a cone evaluates to the indicator function of the dual cone.
+$$
+    W_1(P, Q) = \sup_{\varphi(x) + \psi(y) \leq \|x-y\|} \left[\int \varphi\, dP + \int \psi\, dQ\right]
+$$
 
-We can verify that "the right amount of power" to give the dual player is to allow them to pick over 1-Lipschitz functions.
+This collapses to a single degree of freedom. Setting $x = y$ in the constraint gives $\varphi(x) + \psi(x) \leq 0$, and since the dual player wants to maximize $\int \varphi\, dP + \int \psi\, dQ$, at optimality $\psi = -\varphi$. Substituting back: the constraint $\varphi(x) - \varphi(y) \leq \|x-y\|$ for all $x, y$ is exactly the 1-Lipschitz condition (by symmetry in $x, y$).
 
 :::definition
 A function $f : \R^d \to \R$ is **$1$-Lipschitz** if for all $x, y \in \R^d$, $|f(x) - f(y)| \le \|x - y\|$.
 We write $\mrm{Lip}_1$ for the set of all such functions.
 :::
 
-Why? Staring at $\eqref{eq:penalty-explicit}$, let the dual player choose $\varphi = \psi$ as the 1-Lipschitz function.
-- When the primal player is compliant, the original form $\eqref{eq:lagrangian}$ guarantees that $W_c(P, Q)$ equals the Kantorovich definition $\eqref{eq:w2-static}$; in this case, the 1-Lipschitz condition guarantees that $\mathcal L(\pi, \varphi, \psi)=0$.
-- When the primal player is non-compliant at $P(x)$ (w.l.o.g $P, Q$ are symmetric),
-
 Rearranging, we obtain the **Kantorovich-Rubinstein dual** of $W_1$ (similar result exists for $W_2$):
 $$
 \begin{equation}
-W_1(P, Q) = \sup_{\varphi\in \mrm{Lip}_1} \left[\int \varphi\, dP + \int \psi\, dQ\right] = \sup_{\varphi\in \mrm{Lip}_1} \left[\E_P\, \varphi - \E_Q \, \varphi\right]
+W_1(P, Q) = \sup_{\varphi\in \mrm{Lip}_1} \left[\int \varphi\, dP - \int \varphi\, dQ\right] = \sup_{\varphi\in \mrm{Lip}_1} \left[\E_P\, \varphi - \E_Q \, \varphi\right]
 \label{eq:kr-dual}
 \end{equation}
 $$
@@ -170,8 +168,5 @@ W_1(p_{\mrm{data}}, p_\theta) = \sup_{f \in \mrm{Lip}_1} \left[ \E_{x \sim p_{\m
 $$
 
 This is exactly the [**Wasserstein-GAN**](https://arxiv.org/pdf/1701.07875) (WGAN) objective: train a neural-network critic $f_w$ to approximate the supremum, and train $G_\theta$ to minimize the resulting distance. The Lipschitz constraint is enforced by weight clipping or gradient penalty. Compared to the original GAN's Jensen-Shannon divergence, $W_1$ provides gradients even when the supports of $p_{\mrm{data}}$ and $p_\theta$ don't overlap — which is precisely the mode-collapse pathology that plagued early GANs.
-:::
-
-[remark: connection to TV] (don't modify yet)
 
 [^variational]: Variational characterizations of mutual information and $f$-divergences are some of the most beautiful results in information theory.

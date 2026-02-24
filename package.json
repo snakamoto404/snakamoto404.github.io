@@ -8,9 +8,9 @@
     "npm": ">=10"
   },
   "scripts": {
-    "dev": "astro dev",
-    "start": "astro dev",
-    "build": "astro build",
+    "dev": "astro dev --force",
+    "start": "astro dev --force",
+    "build": "astro build --force",
     "preview": "astro preview"
   },
   "devDependencies": {
