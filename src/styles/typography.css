@@ -30,6 +30,10 @@
       @apply break-words text-foreground decoration-dashed underline-offset-4 hover:text-accent focus-visible:no-underline;
     }
 
+    .question {
+      @apply text-blue-700 dark:text-blue-400;
+    }
+
     li {
       @apply marker:text-accent;
     }

@@ -58,9 +58,6 @@ function normalizeLabel(value) {
 }
 
 function directiveLabel(node) {
-  if (typeof node.label === "string" && node.label.trim()) {
-    return node.label.trim();
-  }
   const attrs = attributeMap(node.attributes);
   const raw = attrs.label || attrs["#"] || attrs.id;
   return normalizeLabel(raw);
@@ -72,6 +69,23 @@ function directiveTitle(node) {
   }
   const attrs = attributeMap(node.attributes);
   return typeof attrs.title === "string" ? attrs.title.trim() : "";
+}
+
+function consumeDirectiveLabel(children) {
+  if (!Array.isArray(children) || children.length === 0) {
+    return { titleChildren: [], bodyChildren: children || [] };
+  }
+  const [first, ...rest] = children;
+  if (
+    first &&
+    first.type === "paragraph" &&
+    first.data &&
+    first.data.directiveLabel === true &&
+    Array.isArray(first.children)
+  ) {
+    return { titleChildren: first.children, bodyChildren: rest };
+  }
+  return { titleChildren: [], bodyChildren: children };
 }
 
 function refTarget(node) {
@@ -97,16 +111,21 @@ function refTarget(node) {
   return "";
 }
 
-function theoremHead(type, headingText, titleText) {
+function theoremHead(type, headingText, titleChildren) {
   const children = [];
+  const normalizedTitle = Array.isArray(titleChildren) ? titleChildren : [];
+  const hasTitle = normalizedTitle.length > 0;
 
   if (type === "proof") {
-    const text =
-      titleText.length > 0 ? `Proof (${titleText}).` : "Proof.";
-    children.push({
-      type: "emphasis",
-      children: [{ type: "text", value: text }],
-    });
+    const proofChildren = [{ type: "text", value: "Proof" }];
+    if (hasTitle) {
+      proofChildren.push({ type: "text", value: " (" });
+      proofChildren.push(...normalizedTitle);
+      proofChildren.push({ type: "text", value: ")." });
+    } else {
+      proofChildren.push({ type: "text", value: "." });
+    }
+    children.push({ type: "emphasis", children: proofChildren });
     return {
       type: "paragraph",
       data: {
@@ -124,11 +143,15 @@ function theoremHead(type, headingText, titleText) {
     });
   }
 
-  if (titleText.length > 0) {
+  if (hasTitle) {
     children.push({ type: "text", value: " " });
     children.push({
       type: "emphasis",
-      children: [{ type: "text", value: `(${titleText})` }],
+      children: [
+        { type: "text", value: "(" },
+        ...normalizedTitle,
+        { type: "text", value: ")" },
+      ],
     });
   }
 
@@ -168,7 +191,6 @@ export function remarkTheorem() {
       }
 
       const label = directiveLabel(node);
-      const title = directiveTitle(node);
       const isNumbered = numberedTypes.has(type);
       let headingText = typeTitles[type];
 
@@ -180,7 +202,17 @@ export function remarkTheorem() {
         }
       }
 
-      const bodyChildren = Array.isArray(node.children) ? [...node.children] : [];
+      const initialBodyChildren = Array.isArray(node.children)
+        ? [...node.children]
+        : [];
+      const { titleChildren, bodyChildren } = consumeDirectiveLabel(
+        initialBodyChildren,
+      );
+      const explicitTitle = directiveTitle(node);
+      const headingTitleChildren =
+        explicitTitle.length > 0
+          ? [{ type: "text", value: explicitTitle }]
+          : titleChildren;
       if (type === "proof") {
         bodyChildren.push({
           type: "html",
@@ -189,7 +221,7 @@ export function remarkTheorem() {
       }
 
       node.children = [
-        theoremHead(type, headingText, title),
+        theoremHead(type, headingText, headingTitleChildren),
         { type: "html", value: '<div class="theorem-env__body">' },
         ...bodyChildren,
         { type: "html", value: "</div>" },
@@ -224,4 +256,3 @@ export function remarkTheorem() {
     });
   };
 }
-

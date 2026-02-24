@@ -10,6 +10,14 @@
   @apply leading-7;
 }
 
+.theorem-env__body > :first-child {
+  @apply mt-0;
+}
+
+.theorem-env__body > :last-child {
+  @apply mb-0;
+}
+
 .theorem-env--theorem,
 .theorem-env--proposition,
 .theorem-env--lemma,

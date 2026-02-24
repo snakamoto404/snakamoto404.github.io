@@ -10,8 +10,8 @@ In finite dimensions, gradient descent is straightforward — compute $\nabla f$
 
 The answer hinges on a beautiful duality between two perspectives on moving mass:
 
-- The **Lagrangian** (particle) view: track individual grains of sand from origin to destination, each following its own least-action trajectory.
-- The **Eulerian** (fluid) view: stand at a fixed point in space and observe the aggregate velocity field of all the passing mass.
+- <span class="question">What is the Lagrangian (particle) view?</span> Track individual grains of sand from origin to destination, each following its own least-action trajectory.
+- <span class="question">What is the Eulerian (fluid) view?</span> Stand at a fixed point in space and observe the aggregate velocity field of all the passing mass.
 
 The unification between these two perspectives is the structural crux of this post, and it decomposes into two clean steps. First, the **single-particle action**: fix a transport plan (who goes where), and classical mechanics (Euler-Lagrange) picks out the unique least-action trajectory — a straight line at constant velocity. The cost of this trajectory is just $\|x_1 - x_0\|^2$. Second, **marginalization**: average these conditional particle velocities over the transport plan to recover a macroscopic Eulerian vector field, with a beautiful variance-drop argument (optimal trajectories don't cross) ensuring that no kinetic energy is lost. The Benamou-Brenier theorem falls out: static Kantorovich cost equals dynamic fluid kinetic energy.
 
