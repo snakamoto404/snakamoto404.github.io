@@ -12,8 +12,8 @@ We currently have a mechanical interpretation -- the loss going to zero produces
 
 For those looking for novel content, the main results of this post are as follows:
 
-1. [**Statistical interpretation of Gaussian drifting**](#gaussian-kernel-smoothing-implements-reverse-kl): we show that drifting with a Gaussian kernel implements Wasserstein gradient descent on the reverse, mode-seeking KL divergence $\mrm{KL}(\tilde q_\theta \| \tilde p_{\mathrm{data}})$ between KDE-smoothed distributions.
-2. [**Maximum likelihood modification**](#proposition-maximum-likelihood-drifting): we derive the drifting field for the forward KL (maximum likelihood) objective $\mrm{KL}(\tilde p_{\mathrm{data}} \| \tilde q_\theta)$. The changes to the current paradigm are minimal: reweigh by the density ratio $Z_p/Z_q$ and use the Gaussian (instead of Laplace) kernel. The resulting drifting field is notably not antisymmetric.
+1. [**Statistical interpretation of Gaussian drifting**](#gaussian-kernel-smoothing-implements-reverse-kl): we show that drifting with a Gaussian kernel implements Wasserstein gradient descent on the reverse, mode-seeking KL divergence $\mrm{KL}(\tilde q_\theta \| \tilde p_{\mathrm{data}})$ between KDE-smoothed distributions. The stop-grad loss implements gradient pullback from sample to parameter space.
+2. [**Maximum likelihood modification**](#proposition-maximum-likelihood-drifting): we derive the drifting field for the maximum likelihood (forward KL) objective $\mrm{KL}(\tilde p_{\mathrm{data}} \| \tilde q_\theta)$. The changes to the current paradigm are minimal: reweigh by the density ratio $Z_p/Z_q$ and use the Gaussian (instead of Laplace) kernel. The resulting drifting field is notably not antisymmetric.
 
 ## Contents
 
