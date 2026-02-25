@@ -1,20 +1,32 @@
 ---
 title: "OT for generative modeling 2 — Wasserstein gradients and drifting models"
 date: 2026-02-23
-summary: "We look at Wasserstein Kaiming He et al.'s Drifting Models, interpret the antisymmetric drifting field as Wasserstein gradient flow on a kernelized discrepancy, and draw the connection to maximum likelihood estimation."
+summary: "We look at Kaiming Deng et al.'s Drifting Models, interpret the antisymmetric drifting field as Wasserstein gradient flow on the reverse KL between kernel-smoothed distributions, and develop the connection to maximum likelihood estimation."
 ---
 
-Flow matching both split the generative problem into two phases: at *training* time, learn a vector field; at *inference* time, integrate an ODE or SDE through that field to produce a sample. The integration is expensive — the reason we care about "number of function evaluations" (NFE) at all — and a great deal of recent work has gone into compressing it: distillation, consistency models, progressive reduction.
+Diffusion and flow matching split the generative problem into two phases: at *training* time, learn a vector field; at *inference* time, integrate an ODE or SDE through that field to produce a sample. The integration is expensive, and a great deal of recent work has gone into compressing it: distillation, consistency models, progressive reduction.
 
-Recent work on **Drifting Models** ([He et al., 2026](https://arxiv.org/abs/2602.04770)) defines a "drifting field" $\mathbf{V}_{p,q}(\mathbf{x})$ that tells each generated sample which direction to move, requires antisymmetry ($\mathbf{V}_{p,q} = -\mathbf{V}_{q,p}$) so that the field vanishes at equilibrium ($p = q$), and train the generator to chase its own drifted targets.
+Recent work on **Drifting Models** ([Deng et al., 2026](https://arxiv.org/abs/2602.04770)) defines a "drifting field" $\mathbf{V}_{p,q}(\mathbf{x})$ that tells each generated sample which direction to move, requires antisymmetry ($\mathbf{V}_{p,q} = -\mathbf{V}_{q,p}$) so that the field vanishes at equilibrium ($p = q$), and train the generator to chase its own drifted targets.
 
-We have a mechanical interpretation -- the loss going to zero produces desirable behavior. But equipped with the Wasserstein machinery we built in [parts 0](/blogs/machine-learning/ot-generative-0-static/)–[1](/blogs/machine-learning/ot-generative-1-wasserstein-geometry/), we can say something much sharper. The antisymmetric drifting field is the Wasserstein gradient of a distribution discrepancy; the training dynamics execute gradient descent on the manifold $\mathcal{W}_2$; and the $L^2$ regression loss against drifted targets is, through the Wasserstein bridge, a gradient step on a proper statistical divergence. The whole paradigm admits a precise connection to maximum likelihood.
+We currently have a mechanical interpretation -- the loss going to zero produces desirable behavior. But equipped with the Wasserstein machinery we built in [parts 0](/blogs/machine-learning/ot-generative-0-static/)–[1](/blogs/machine-learning/ot-generative-1-wasserstein-geometry/), we can say something much sharper. The antisymmetric drifting field is the Wasserstein gradient of a distribution discrepancy; the training dynamics execute gradient descent on the manifold $\mathcal{W}_2$; and the $L^2$ regression loss against drifted targets is, through the Wasserstein bridge, a gradient step on a proper statistical divergence. The whole paradigm admits a precise connection to maximum likelihood.
+
+For those looking for novel content, the main results of this post are as follows:
+
+1. [**Statistical interpretation of Gaussian drifting**](#gaussian-kernel-smoothing-implements-reverse-kl): we show that drifting with a Gaussian kernel implements Wasserstein gradient descent on the reverse, mode-seeking KL divergence $\mrm{KL}(\tilde q \| \tilde p)$ between KDE-smoothed distributions.
+2. [**Maximum likelihood modification**](#proposition-maximum-likelihood-drifting): we derive the drifting field for the forward KL (maximum likelihood) objective $\mrm{KL}(\tilde p \| \tilde q)$. The changes to the current paradigm are minimal: reweigh by the density ratio $Z_p/Z_q$ and use the Gaussian (instead of Laplace) kernel. The resulting drifting field is notably not antisymmetric.
 
 ## Contents
 
-- [Formulation of drifting models](#formulation): mechanics of the paradigm.
-- [Otto calculus](#otto-calculus): some theory connecting statistical divergences and euclidean flow.
-- [Drifting as MLE](#drifting-as-mle)
+- [Formulation](#formulation)
+  - [The drifting field](#the-drifting-field)
+- [Wasserstein Gradient Flow](#wasserstein-gradient-flow)
+  - [The Kullback-Leibler functional](#the-kullback-leibler-functional)
+  - [Gradients on manifolds](#gradients-on-manifolds)
+  - [Proving Otto's theorem](#proving-ottos-theorem)
+- [Statistical interpretation of drifting](#statistical-interpretation-of-drifting)
+  - [Gaussian kernel smoothing implements Reverse KL](#gaussian-kernel-smoothing-implements-reverse-kl)
+  - [Implementing forward KL](#implementing-forward-kl)
+  - [Proposition: maximum likelihood drifting](#proposition-maximum-likelihood-drifting)
 
 ## Formulation
 
@@ -73,7 +85,7 @@ We take a step back to develop the theory of **Wasserstein gradient flow** (and 
 
 ### The Kullback-Leibler functional
 
-Fixing data distribution $p$, maximimizing likelihood of the data under model is equivalent to maximizing the KL functional:
+Fixing data distribution $p$, maximizing likelihood of the data under model is equivalent to maximizing the KL functional:
 $$
 \begin{aligned}
     \mrm{KL}(P\|Q_\theta)
@@ -118,7 +130,7 @@ The theorem should look fairly intuitive: on the RHS, we compute the pointwise d
 :::
 
 Several remarks are in order:
-1. The definition is [definition eqref]. This is a theorem (equation), not a definition! The general differential-geometry gradient exists, but its general computation does not usually admit such easy form.
+1. Despite appearing like a definition, this is a *theorem*! The general differential-geometry gradient exists, but its general computation does not usually admit such easy form.
 2. The expression $\dfrac{\delta\mathcal F}{\delta P}: \mathbb R^n\to \R$ is **a scalar function on the sample space** that's usually known as the **functional derivative**. Its values are the point-wise derivatives of $F$ w.r.t. $P$.
 
 Again, the functional derivative **is a scalar function on the sample space**. Its definition is best demonstrated by two useful examples:
@@ -181,9 +193,12 @@ $$
 $$
 Applying the theorem:
 $$
+\begin{equation}
     \mrm{grad}_W \mrm{KL}(Q_\theta\|P)\big|_{Q_\theta} = \nabla \log Q_\theta - \nabla \log P = s_{Q_\theta} - s_P
+\label{eq:reverse-kl-gradient}
+\end{equation}
 $$
-The Wasserstein gradient is a **score difference**. Gradient descent velocity: $v = s_P - s_{Q_\theta}$. Particles flow in the direction where the data score exceeds the model score. This is exactly the drifting field's structure — but it requires $\nabla \log P$, the data score. With empirical samples (Diracs), this is undefined: the **Dirac trap** that we return to in [the next section](#why-not-kl-the-dirac-trap).
+The Wasserstein gradient is a **score difference**. Gradient descent velocity: $v = s_P - s_{Q_\theta}$. Particles flow in the direction where the data score exceeds the model score. This is exactly the drifting field's structure — but it requires $\nabla \log P$, the data score. With empirical samples (Diracs), this is undefined: the **Dirac trap** that we return to in [the next section](#gaussian-kernel-smoothing-implements-reverse-kl).
 :::
 
 ### Proving Otto's theorem
@@ -206,59 +221,113 @@ $$
 \end{aligned}
 $$
 
-## Drifting as MLE
+## Statistical interpretation of drifting
 
 We now connect the drifting field to Wasserstein gradient flow and ask: what functional is being minimized, and what does this have to do with maximum likelihood?
 
-### The antisymmetric constraint as gradient flow signature
+Recall the antisymmetry property $V_{p,q} = -V_{q,p}$. If you have carefully followed through all of the previous examples, this should remind you of the Wasserstein gradient of reverse KL $\eqref{eq:reverse-kl-gradient}$. Let's explore this.
 
-The antisymmetry $V_{p,q} = -V_{q,p}$ is not just a convenient property — it is the **structural signature of a gradient flow** on a symmetric discrepancy.
+### Gaussian kernel smoothing implements Reverse KL
 
-If a functional $\mathcal D(p, q)$ is symmetric in its arguments, then its first variation with respect to $q$ satisfies $\frac{\delta \mathcal D}{\delta q}(p, q) = -\frac{\delta \mathcal D}{\delta q}(q, p)$. Lifting to the tangent space via $\nabla$, the resulting velocity field inherits the antisymmetry. The drifting field's antisymmetry therefore guarantees that it is a **conservative gradient field** — the system flows down a well-defined potential landscape toward the equilibrium $p = q$.
+The reverse KL example above gave us $v(x) = \nabla \log p(x) - \nabla \log q_\theta(x)$ — a score difference matching the drifting field's attraction-minus-repulsion structure. But with empirical Diracs, $\nabla \log p$ is undefined: the **Dirac trap**. Diffusion models resolve this by convolving with noise. Drifting models resolve it differently — via implicit **kernel density estimation** (KDE). Let's see how this works; define the KDE-smoothed distributions:
 
-### Why not KL: the Dirac trap
-
-A natural hypothesis: the drifting field is the Wasserstein gradient of the KL divergence, and drifting models are doing MLE. The geometric structure is right — the antisymmetry, the equilibrium — but there is a fatal obstruction.
-
-Consider $\mrm{KL}(q \| p)$ (reverse KL, minimized over $q$). Its Wasserstein gradient involves $\nabla \log p$ — the score of the data distribution. With only empirical samples, $p = \frac{1}{N}\sum_i \delta(x - x_i)$, and $\nabla \log p$ is undefined (the gradient of a Dirac delta is a distribution, not a function). This is the **Dirac trap**: you cannot compute KL gradients from raw samples without smoothing.
-
-This is precisely why diffusion models add noise — convolving with Gaussians smooths the Diracs, making the score $\nabla \log \rho_t$ computable everywhere. Drifting models operate with only empirical samples. The functional **cannot** be KL.
-
-### The functional is MMD
-
-The drifting field's kernel structure matches the Wasserstein gradient of **Maximum Mean Discrepancy**:
-
-:::definition[MMD]
+:::definition[KDE-smoothed distributions]
+Given empirical distributions $p, q$ and the Gaussian kernel $k(x, y) = \exp\!\left(-\frac{\|x-y\|^2}{2\tau^2}\right)$, define
 $$
-    \mrm{MMD}^2(p, q) = \E_{x,x'\sim p}[k(x, x')] - 2\,\E_{x\sim p,\, y\sim q}[k(x, y)] + \E_{y,y'\sim q}[k(y, y')]
+    \tilde p(x) = \E_{y^+\sim p}[k(x, y^+)], \quad \tilde q(x) = \E_{y^-\sim q}[k(x, y^-)]
 $$
+Note that $\tilde p(x) = Z_p(x)$ and $\tilde q(x) = Z_q(x)$. The per-point normalization constants in the drifting field **are** the KDE densities.
 :::
 
-The Wasserstein gradient of $\mrm{MMD}^2$ with respect to the second argument $q$, evaluated at a point $x$ in the support of $q$, is:
+Now consider the reverse KL between the smoothed distributions: $\mathcal F(\tilde q) = \mrm{KL}(\tilde q \| \tilde p)$. From the [reverse KL example](#applying-ottos-theorem-to-reverse-kl) above, the Wasserstein gradient descent velocity is:
 $$
-    \nabla_W \mrm{MMD}^2\big|_x \;\propto\; \E_{y\sim p}[\nabla_x k(x, y)] - \E_{y\sim q}[\nabla_x k(x, y)]
+    v(x) = \nabla_x \log \tilde p(x) - \nabla_x \log \tilde q(x)
 $$
 
-This is attraction toward data minus repulsion from model — precisely the drifting field's structure. MMD is symmetric, so antisymmetry comes for free. And MMD is computable from empirical samples with no Dirac trap.
+We expand each score using the log-derivative trick $\nabla \log f = \nabla f / f$. For the smoothed data score:
+$$
+\begin{aligned}
+    \nabla_x \log \tilde p(x)
+    &= \frac{1}{\tilde p(x)}\nabla_x \E_{y^+\sim p}[k(x, y^+)]
+    = \frac{1}{Z_p(x)}\E_{y^+\sim p}[\nabla_x k(x, y^+)]
+\end{aligned}
+$$
+For the Gaussian kernel, $\nabla_x k(x, y) = k(x, y)\frac{y - x}{\tau^2}$. Absorbing the $1/\tau^2$ into the learning rate:
+$$
+    \nabla_x \log \tilde p(x) = \frac{1}{Z_p(x)}\E_{y^+\sim p}\!\left[k(x, y^+)(y^+ - x)\right] = V_p^+(x)
+$$
+This is precisely the data attraction field. The same calculation with $q$ yields $\nabla_x \log \tilde q(x) = V_q^-(x)$, the model repulsion field. Therefore:
 
-:::remark[The normalization]
-The vanilla MMD gradient uses uniform averages. The paper's drifting field additionally normalizes by $Z_p(x), Z_q(x)$, converting uniform kernel averages into softmax-weighted mean shifts. This likely corresponds to minimizing a **normalized** kernel discrepancy (a ratio of kernel expectations rather than a difference). The normalization improves numerical stability and may change the implicit functional; pinning down the exact modified functional is an open question.
+:::theorem[drifting field as Wasserstein gradient]
+The canonical drifting field is the negative Wasserstein gradient of the reverse KL between KDE-smoothed distributions:
+$$
+    V_{p,q} = \nabla \log \tilde p - \nabla \log \tilde q = V_p^+ - V_q^- = -\mrm{grad}_W\, \mrm{KL}(\tilde q \| \tilde p)
+$$
+Each training step executes the pullback of Wasserstein gradient descent on $\mrm{KL}(\tilde q \| \tilde p)$ in $\theta$-space.
 :::
 
-### Connection to MLE
+:::remark[the Laplace deviation]
+The derivation above assumes a Gaussian kernel throughout. The actual paper specifies a Laplace kernel $k(x,y) = \exp(-\|x-y\|/\tau)$, whose true spatial gradient is
+$$
+    \nabla_x k_{\mrm{Lap}}(x, y) = k(x, y)\frac{y - x}{\tau\|x - y\|}
+$$
+This is a **unit-direction** pull of constant magnitude $1/\tau$. The paper's drifting field uses **Laplace scalar weights** $k_{\mrm{Lap}}(x, y^+)$ but **Gaussian vector gradients** $(y^+ - x)$ — a deliberate hybrid. This might have been an empirically successful choice because Laplace weights have heavier tails than Gaussian, preventing kernel starvation in high dimensions.
+:::
 
-Drifting models are **not** standard MLE — they minimize a kernel discrepancy (MMD), not a likelihood. But we can still draw precise connections.
+### Implementing forward KL
 
-**Characteristic kernels and convergence.** If the kernel $k$ is *characteristic* (which exponential kernels are on compact domains), then $\mrm{MMD}(p, q) = 0$ iff $p = q$. At convergence, the model distribution is exact. This is stronger than a bound — it is an exact zero of the divergence.
+The reverse KL functional $\mrm{KL}(\tilde q \| \tilde p)$ is **mode-seeking**: particles collapse into well-defined modes and ignore the rest, because the cost of generating samples where data density is zero is infinite. Under the maximum likelihood estimate principle, we typically prefer **forward KL** $\mrm{KL}(\tilde p \| \tilde q)$, which is **mass-covering**: the model is forced to stretch over the entire support of the data.
 
-**The training dynamics on $\mathcal W_2$.** Each training step computes the drifting field (an approximation to the Wasserstein gradient of MMD), shifts the targets, and trains the generator to output the shifted targets. Over training iterations, the pushforward distribution $q_\theta$ physically crawls across $\mathcal W_2$ toward $p_{\mrm{data}}$. The training dynamics are Wasserstein gradient descent on MMD, with the step size absorbed into the kernel bandwidth $\tau$.
+Apply Otto calculus to $\mathcal F(\tilde q) = \mrm{KL}(\tilde p \| \tilde q)$. The functional derivative w.r.t. the flowing model $\tilde q$ is $\frac{\delta}{\delta \tilde q}\mrm{KL}(\tilde p \| \tilde q) = -\tilde p / \tilde q$ (from the [forward KL example](#applying-ottos-theorem-to-forward-kl) above). The Wasserstein gradient descent velocity is:
+$$
+    v_{\mrm{MLE}}(x) = \nabla_x \frac{\tilde p(x)}{\tilde q(x)}
+    = \frac{\tilde q\,\nabla_x \tilde p - \tilde p\,\nabla_x \tilde q}{\tilde q^2}
+    = \frac{\tilde p(x)}{\tilde q(x)}\Big(\nabla_x \log \tilde p - \nabla_x \log \tilde q\Big)
+$$
+The term in parentheses is exactly the reverse KL velocity — the canonical drifting field $V_{p,q}$:
 
-**Three paradigms, three functionals.** We can now cleanly compare the three major generative paradigms through the Wasserstein lens:
+:::theorem[forward KL via density ratio scaling]
+$$
+    v_{\mrm{MLE}}(x) = \frac{\tilde p(x)}{\tilde q(x)} \cdot V_{p,q}(x) = \frac{Z_p(x)}{Z_q(x)} \cdot V_{p,q}(x)
+$$
+Since $Z_p, Z_q$ are already computed to evaluate the drifting field, the density ratio is **free**.
+:::
 
-| | **Functional** | **Training** | **Inference** |
-|---|---|---|---|
-| **Diffusion** | KL to noise (WGF) | Learn score $\nabla \log \rho_t$ | Reverse SDE/ODE (many NFE) |
-| **Flow matching** | Benamou-Brenier action | Learn geodesic velocity field | Integrate ODE (few NFE) |
-| **Drifting** | MMD (WGF) | Chase drifted targets | Single forward pass (1 NFE) |
+### Proposition: maximum likelihood drifting
 
-**Open questions.** Can we get a formal convergence rate for the training dynamics? Talagrand-type inequalities could bridge MMD $\to$ $W_2$ $\to$ KL, but the per-point normalization complicates the analysis. The relationship between the kernel bandwidth $\tau$ and the effective step size on $\mathcal W_2$ also deserves formalization.
+Combining the results above, we can state concretely what a maximum-likelihood variant of drifting looks like.
+
+:::theorem[MLE drifting field]
+The Wasserstein gradient descent velocity for the forward KL $\mrm{KL}(\tilde p \| \tilde q)$ between KDE-smoothed distributions, using the Gaussian kernel, is
+$$
+    V_{\mrm{MLE}}(x) = \frac{Z_p(x)}{Z_q(x)} \cdot V_{p,q}^{\mrm{Gauss}}(x)
+$$
+where $V_{p,q}^{\mrm{Gauss}}$ is the canonical drifting field evaluated with Gaussian kernel weights.
+:::
+
+What does this mean in practice? The changes to the existing training protocol are minimal. Here is the current Deng et al. procedure:
+
+**Existing protocol (Deng et al.):**
+1. Sample a batch of data points $\{y_i^+\} \sim p$ and generate model outputs $\{x_j\} = \{f_\theta(\epsilon_j)\}$.
+2. For each model sample $x_j$, compute the Laplace kernel values $k(x_j, y_i^+)$ and $k(x_j, x_{j'})$ against all data and model samples respectively. Normalize to obtain $Z_p(x_j)$, $Z_q(x_j)$, and evaluate the drifting field $V_{p,q}(x_j) = V_p^+(x_j) - V_q^-(x_j)$.
+3. Form drifted targets $\hat x_j = x_j + V_{p,q}(x_j)$.
+4. Minimize $\|f_\theta(\epsilon_j) - \mathrm{stopgrad}(\hat x_j)\|^2$.
+
+**MLE modification (two changes):**
+1. Same.
+2. Same, but replace the **Laplace** kernel with the **Gaussian** kernel.
+3. Form drifted targets $\hat x_j = x_j + \frac{Z_p(x_j)}{Z_q(x_j)} \cdot V_{p,q}(x_j)$. That is, scale the drifting field by the density ratio.
+4. Same.
+
+| | **Deng et al.** | **MLE modification** |
+|---|---|---|
+| Kernel | Laplace $e^{-\|x-y\|/\tau}$ | Gaussian $e^{-\|x-y\|^2/2\tau^2}$ |
+| Drifting field | $V_{p,q}$ | $\frac{Z_p}{Z_q} \cdot V_{p,q}$ |
+| Antisymmetric? | Yes | No |
+| Functional minimized | $\approx$ Reverse KL (mode-seeking) | Forward KL (mass-covering, MLE) |
+
+Several qualitative differences are worth noting:
+
+**Antisymmetry is lost.** The density ratio breaks the symmetry: $\frac{Z_p}{Z_q} V_{p,q} \neq -\frac{Z_q}{Z_p} V_{q,p}$ in general. But equilibrium is preserved — when $p = q$, we have $Z_p = Z_q$ and $V_{p,q} = 0$, so the field still vanishes.
+
+**Mode-covering vs mode-seeking.** This is the main qualitative shift. Forward KL penalizes the model for assigning low density where data is present: dropped modes are actively hunted. The density ratio $Z_p/Z_q$ acts as a spatially varying learning rate — particles in under-represented regions ($Z_q$ small, $Z_p$ large) take larger steps, while particles in over-crowded regions slow down.
