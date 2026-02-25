@@ -18,123 +18,193 @@ We have a mechanical interpretation -- the loss going to zero produces desirable
 
 ## Formulation
 
-The drifting models paradigm has three ingredients: a **drifting field** that tells generated samples which direction to move, a **training loop** that chases drifted targets, and **1-NFE inference** — a single forward pass through the generator, no ODE integration required.
+The drifting models paradigm consists of:
+
+- a **drifting field** that tells generated samples which direction to move
+- a **training loop** that chases drifted targets
+
+In this generative paradigm, we're given samples from $P_{\mathrm{data}} \in \mathcal W_2(\R^n)$, we consider an initial noise distribution $P_{\mathrm{noise}} \in \mathcal W_2(\R^d)$, and a parametric model generator $f_\theta: \mathbb R^d\to \mathbb R^n$. Denote the pushforward measure by $P_{\mathrm{model}} \in \mathcal W_2(\R^n)$. To be consistent with the paper, we abbreviate
+$$
+    p := P_{\mathrm{data}}, \quad q_\theta := P_{\mathrm{model}, \theta}
+$$
+The work considers general antisymmetric drift fields $V_{p, q}: \mathbb R^d\to \mathbb R^d$; each field is a vector field on the sample space. The training loop consists of iteratively minimizing
+
+$$
+    \mathcal L = \mathbb E_{\epsilon\sim P_{\mathrm{noise}}} \| f_\theta(\epsilon) - \text{stopgrad} \left[
+        f_\theta(\epsilon) + V_{p, q_\theta}(f_\theta(\epsilon))
+    \right]^2
+$$
+Note that $p=q \implies \mathcal L=0$.
 
 ### The drifting field
 
-Given a data distribution $p$ and a model distribution $q$ (the pushforward of noise through the generator $f_\theta$), the drifting field decomposes into attraction toward data and repulsion from the model's own samples:
+Let's consider the author's choice of the drifting field
+:::definition[canonical drifting field]
 
-:::definition[Drifting field]
+Consider the following antisymmetric drifting field evaluated at sample space $x\in \mathbb R^n$:
 $$
-    V_{p,q}(x) = \underbrace{\frac{1}{Z_p(x)}\E_{y^+\sim p}\!\left[k(x, y^+)(y^+ - x)\right]}_{V_p^+(x):\;\text{attraction to data}} \;-\; \underbrace{\frac{1}{Z_q(x)}\E_{y^-\sim q}\!\left[k(x, y^-)(y^- - x)\right]}_{V_q^-(x):\;\text{repulsion from model}}
+\begin{aligned}
+    V_{p,q}(x)
+    &=
+    \underbrace{\frac{1}{Z_p(x)}\E_{y^+\sim p}\!\left[k(x, y^+)(y^+ - x)\right]}_{V_p^+(x):\;\text{attraction to data}} \;-\; \underbrace{\frac{1}{Z_q(x)}\E_{y^-\sim q}\!\left[k(x, y^-)(y^- - x)\right]}_{V_q^-(x):\;\text{repulsion from model}} \\
+    &= \dfrac{1}{Z_pZ_q} \mathbb E_{y^+\sim p, y^-\sim q} \left[
+        k(x, y^+) k(x, y^-)(y^+ - y^-)
+    \right]
+\end{aligned}
 $$
-where $k(x,y) = \exp(-\|x - y\|/\tau)$ is an exponential kernel with temperature $\tau$, and $Z_p(x) = \E_{y^+\sim p}[k(x, y^+)]$, $Z_q(x) = \E_{y^-\sim q}[k(x, y^-)]$ are per-point normalizations (softmax weights).
+The kernel is Laplace-weighted
+$$
+    k(x,y) = \exp(-\|x - y\|/\tau)
+$$
+The per-point normalization translates to softmax weighting
+$$
+    Z_p(x) = \E_{y^+\sim p}[k(x, y^+)], \quad Z_q(x) = \E_{y^-\sim q}[k(x, y^-)]
+$$
+:::
+Let's unpack this, $k(x, y^{\pm})$ is a smoothing kernel over samples of $y^\pm - x$. In the large-sample precise limit $\tau\to 0$, we obtain
+$$
+    \mathbb E_{x\sim q} [V_p^+(x)] = \mathbb E_{x\sim q, y^+\sim p} (y^+ - x)
+$$
+
+
+## Wasserstein Gradient Flow
+
+We take a step back to develop the theory of **Wasserstein gradient flow** (and return to capital letters): given a probability distribution $Q_\theta$, we can assign some loss / preference to it by some functional $\mathcal F:\mathcal W_2\to \R$. What happens to the probability distribution as we try to minimize $\mathcal F(q_\theta)$ by gradient descent?
+
+### The Kullback-Leibler functional
+
+Fixing data distribution $p$, maximimizing likelihood of the data under model is equivalent to maximizing the KL functional:
+$$
+\begin{aligned}
+    \mrm{KL}(P\|Q_\theta)
+    &= \mathbb E_{x\sim P} \left[
+        \log \dfrac{Q_\theta(x)}{P(x)}
+    \right] \\
+    &= \mathbb E_{x\sim P} \log Q_\theta(x) - \mathbb E_{x\sim P}\log P(x)\\
+    &= \int dP\, \log Q - \int dP\, \log P
+\end{aligned}
+$$
+For more interesting properties of KL divergence, see [these notes](https://nlyu1.github.io/classical-info-theory/kullback-leibler-divergence.html). From a SGD perspective, minimizing KL is equivalent to maximizing likelihood when empirical samples are i.i.d from $P$:
+$$
+    \nabla_\theta \, \mathrm{KL}(P\|Q_\theta) = \nabla_\theta \mathbb E_{x\sim P} \, \log Q_\theta(x)
+$$
+
+
+### Gradients on manifolds
+
+I like to interpret differential geometry as the "lifting" of Euclidean constructs into locally Euclidean manifolds. Gradients are no different. In Euclidean space, given a curve $\gamma: [0, 1]\to \R^n$ and a linear function $f:\R^n\to \R$, the chain rule yields
+$$
+    \df d {dt} f(\gamma(t)) = \dot \gamma(t) \cdot \nabla\big|_{\gamma(t)} f
+$$
+Lift the inner product to the manifold metric, can use this to define gradients on manifolds:
+
+:::definition[Wasserstein gradients]
+
+Given a scalar function $f:\mathcal W_2\to \R$, the gradient of $f$ at the point $P\in \mathcal W_2$ is the unique tangent vector $v=\mathrm{grad}_W f(P)$ such that, for any curve $\gamma(t)$ with $\gamma(t)=x$, we have
+$$
+    \dfrac{d}{dt} f(\gamma(t)) = \la \dot \gamma(t), v\ra_W = \mathbb E_P \la \dot \gamma(t), v\ra
+$$
+where $\la\cdot, \cdot\ra_W$ is our familiar Wasserstein metric on $\mathcal W_2$, and $\la\cdot, \cdot\ra$ in the second equality is the familiar Euclidean metric, after we expanded the definition of the Wasserstein metric.
 :::
 
-Each term is a kernel-weighted mean shift: $V_p^+$ points $x$ toward nearby data, $V_q^-$ points $x$ toward nearby model samples. Their difference pushes generated samples toward data and away from other generated samples.
+Now, we're equipped to state a major result in [Otto calculus](https://www.math.toronto.edu/mccann/assignments/477/Otto01.pdf). We'll prove it shortly
 
-Two structural properties are immediate:
-
-:::proposition
-**Antisymmetry.** $V_{p,q}(x) = -V_{q,p}(x)$ for all $x$. (Swap the roles of $p$ and $q$; attraction and repulsion trade places.)
+:::theorem[fundamental theorem of Otto calculus]
+Given a probability functional $\mathcal F:\mathcal W_2\to \R$, its Wasserstein gradient can be computed as
+$$
+    \mathrm{grad}_W \mathcal F(P) = \nabla_x \left(\dfrac{\delta \mathcal F}{\delta P}\right)
+$$
+The theorem should look fairly intuitive: on the RHS, we compute the pointwise derivative of $\mathcal F$ w.r.t. the point density at $P(x)$ and use this as the potential. The theorem tells us that the direction of steepest $\mathcal F$-ascent is the gradient of this (functional derivative) potential.
 :::
 
-:::proposition
-**Equilibrium.** $p = q \implies V_{p,q}(x) = 0$ for all $x$. (When model matches data, the two terms cancel.)
+Several remarks are in order:
+1. The definition is [definition eqref]. This is a theorem (equation), not a definition! The general differential-geometry gradient exists, but its general computation does not usually admit such easy form.
+2. The expression $\dfrac{\delta\mathcal F}{\delta P}: \mathbb R^n\to \R$ is **a scalar function on the sample space** that's usually known as the **functional derivative**. Its values are the point-wise derivatives of $F$ w.r.t. $P$.
+
+Again, the functional derivative **is a scalar function on the sample space**. Its definition is best demonstrated by two useful examples:
+
+:::example
+For the entropy functional $\mathcal H(P) = -\int dP\, \log P = -\int P(x) \log P(x) dx$, applying the product rule yields:
+$$
+    \dfrac{\delta \mathcal H(P)}{\delta P}(x) = -(\log P(x) + 1)
+$$
+
+The KL functional $\mathrm{KL}(P\|Q_\theta)$ has two arguments:
+$$
+    \mathrm{KL}(P\|Q_\theta) = \int dP\, \log P - \int dP \log Q_\theta
+$$
+
+Taking the functional derivative w.r.t. the data distribution $P$, we treat $Q_\theta$ as a constant:
+$$
+\begin{aligned}
+    \dfrac{\delta \mathrm{KL}(P\|Q_\theta)}{\delta P}(x)
+    &= \pd P\Big( P \log P - P \log Q_\theta \Big) \\
+    &= \log P(x) - \log Q_\theta(x) + 1
+\end{aligned}
+$$
+Similarly w.r.t. $Q_\theta$:
+$$
+\begin{aligned}
+    \dfrac{\delta \mathrm{KL}(P\|Q_\theta)}{\delta Q_\theta}(x)
+    &= \partial_{Q_\theta} \Big( - P \log Q_\theta \Big) = -\dfrac{P(x)}{Q_\theta(x)}
+\end{aligned}
+$$
 :::
 
-### Training
+:::example[applying Otto's theorem to entropy]
 
-The generator $f_\theta: \R^n \to \R^n$ maps noise $\epsilon\sim p_{\mrm{noise}}$ to samples $x = f_\theta(\epsilon)$. Training proceeds by:
-
-1. Generate a batch: $x = f_\theta(\epsilon)$
-2. Compute the drifting field $V = V_{p,q}(x)$ from a data batch $y^+ \sim p$ and the generated batch $y^- = x$
-3. Form **drifted targets**: $\tilde x = \mrm{stopgrad}(x + V)$
-4. Minimize $\mathcal L = \|f_\theta(\epsilon) - \tilde x\|^2$
-
-The gradient does **not** flow through $V$ — the `stopgrad` is crucial. Without it, the generator could minimize the loss by making $V$ vanish (collapsing the field) rather than by actually matching data.
-
-:::remark
-The loss simplifies to $\|V(f_\theta(\epsilon))\|^2$: the squared magnitude of the drifting field at the generator's output. The loss is zero iff the drifting field vanishes everywhere the model places mass — which, by the equilibrium property, happens when $q_\theta = p$.
+From above, $\frac{\delta \mathcal H}{\delta P} = -(\log P + 1)$. Applying the theorem:
+$$
+    \mrm{grad}_W \mathcal H(P) = \nabla_x\left(-\log P - 1\right) = -\nabla \log P
+$$
+The Wasserstein gradient of entropy is the **negative score**. Gradient ascent on entropy has velocity $v = \mrm{grad}_W\mathcal H = -\nabla \log P$. Plugging into the continuity equation:
+$$
+    \pd t P = \nabla \cdot(P\,\nabla \log P) = \Delta P
+$$
+This is the **heat equation**: heat diffusion is Wasserstein gradient ascent of entropy.
 :::
 
-### Inference
+:::example[applying Otto's theorem to forward KL]
 
-At test time, sampling is a single forward pass: $x = f_\theta(\epsilon)$ for $\epsilon \sim p_{\mrm{noise}}$. This is **1-NFE** — no iterative ODE/SDE integration. The "integration" has been absorbed into the training iterations: over the course of SGD, the pushforward distribution $q_\theta$ physically migrates across distribution space toward $p$.
-
-:::remark[Comparison with flow matching]
-Flow matching learns a vector field at training time, then integrates an ODE at inference time. Drifting models learn by iteratively chasing drifted targets at training time — absorbing the transport dynamics into SGD — and require only a single forward pass at inference.
+Apply to $Q_\theta$ in $\mrm{KL}(P\|Q_\theta)$. From above, $\frac{\delta\mrm{KL}(P\|Q_\theta)}{\delta Q_\theta} = -P/Q_\theta$. Applying the theorem:
+$$
+    \mrm{grad}_W \mrm{KL}(P\|Q_\theta)\big|_{Q_\theta} = \nabla_x\!\left(-\frac{P}{Q_\theta}\right)
+$$
+Gradient descent velocity: $v = \nabla_x(P/Q_\theta)$. Particles flow toward regions where the **density ratio** $P/Q_\theta$ increases. In practice, the density ratio is expensive to estimate, which is one reason forward KL is rarely minimized by direct Wasserstein gradient descent.
 :::
 
-## Otto calculus
+:::example[applying Otto's theorem to reverse KL]
 
-We now develop the theory of **Wasserstein gradient flow**: how to compute the "steepest descent direction" of a functional on the distribution manifold $\mathcal W_2$. This is the machinery that will let us interpret the drifting field geometrically.
-
-### Functionals on $\mathcal W_2$
-
-A **functional** $\mathcal F: \mathcal W_2 \to \R$ maps a distribution to a scalar. Gradient flow on $\mathcal W_2$ means finding the velocity field $v$ that makes $\rho_t$ descend $\mathcal F$ steepest under the Wasserstein metric.
-
-The central example is the **KL divergence** to a target distribution $\rho_\infty(x) \propto \exp(-U(x))$:
+Apply to $Q_\theta$ in $\mrm{KL}(Q_\theta\|P)$. The functional derivative is
 $$
-    \mrm{KL}(\rho \| \rho_\infty) = \underbrace{\int \rho \log \rho\, dx}_{\text{entropy } H[\rho]} \;+\; \underbrace{\int \rho\, U\, dx}_{\text{potential energy}} \;+\; \mrm{const}
+    \frac{\delta\mrm{KL}(Q_\theta\|P)}{\delta Q_\theta} = \log Q_\theta - \log P + 1
 $$
-The entropy term penalizes concentration; the potential energy term pulls mass toward the minima of $U$ in the sample space.
-
-### The Otto calculus pipeline
-
-Otto calculus is a three-step pipeline that converts a scalar functional on $\mathcal W_2$ into a concrete flow equation on $\R^n$.
-
-**Step 1 — First variation.** Compute the Fréchet derivative $\frac{\delta \mathcal F}{\delta \rho}$: how does $\mathcal F$ change under an infinitesimal perturbation of $\rho$? The result is a **scalar function on $\R^n$**.
-
-**Step 2 — Lift to the tangent space.** Apply the spatial gradient $\nabla$ to obtain a vector field on $\R^n$. This is the **Wasserstein gradient**:
+Applying the theorem:
 $$
-    \nabla_W \mathcal F = \nabla \frac{\delta \mathcal F}{\delta \rho}
+    \mrm{grad}_W \mrm{KL}(Q_\theta\|P)\big|_{Q_\theta} = \nabla \log Q_\theta - \nabla \log P = s_{Q_\theta} - s_P
 $$
-Recall from [Part 1](/blogs/machine-learning/ot-generative-1-wasserstein-geometry/) that tangent vectors on $\mathcal W_2$ are gradient vector fields on $\R^n$. Step 2 lifts a scalar (the first variation) into a valid tangent vector.
-
-**Step 3 — Continuity equation.** The gradient flow velocity is $v = -\nabla_W \mathcal F$ (negative gradient = steepest descent). The density evolves by the continuity equation:
-$$
-    \pd t \rho + \nabla \cdot (\rho\, v) = 0 \qquad \Longrightarrow \qquad \pd t \rho = \nabla \cdot \!\left(\rho\, \nabla \frac{\delta \mathcal F}{\delta \rho}\right)
-$$
-
-This is the **abstract Wasserstein gradient flow equation**. Everything hinges on computing $\frac{\delta \mathcal F}{\delta \rho}$ for the functional of interest.
-
-### Full derivation: KL $\to$ Fokker-Planck
-
-Let's run the pipeline on $\mathcal F[\rho] = \mrm{KL}(\rho \| \rho_\infty)$ with $\rho_\infty \propto \exp(-U)$.
-
-**Step 1.** The first variation of KL is:
-$$
-    \frac{\delta}{\delta \rho}\mrm{KL}(\rho \| \rho_\infty) = \log \rho + U(x) + 1
-$$
-(The $+1$ comes from $\frac{\delta}{\delta \rho}\int \rho \log \rho = \log \rho + 1$; it's a constant and will be killed by $\nabla$ in Step 2.)
-
-**Step 2.** The Wasserstein gradient is:
-$$
-    \nabla_W \mrm{KL} = \nabla(\log \rho + U) = \underbrace{\nabla \log \rho}_{\text{Stein score}} + \nabla U
-$$
-Note how the **Stein score** $\nabla \log \rho$ appears naturally — it is not introduced ad hoc but arises inevitably from the entropy term of KL under Otto calculus.
-
-**Step 3.** The gradient flow velocity is $v = -\nabla \log \rho - \nabla U$. Plugging into the continuity equation:
-$$
-    \pd t \rho = -\nabla \cdot(\rho\, v) = \nabla\cdot\bigl(\rho\,\nabla\log \rho + \rho\,\nabla U\bigr)
-$$
-
-The first term simplifies: $\nabla \cdot (\rho\, \nabla \log \rho) = \nabla \cdot (\rho \cdot \frac{\nabla \rho}{\rho}) = \nabla \cdot (\nabla \rho) = \Delta \rho$, giving:
-
-:::theorem[Wasserstein gradient flow of KL]
-$$
-\begin{equation}
-    \pd t \rho = \Delta \rho + \nabla \cdot (\rho\, \nabla U)
-    \label{eq:fokker-planck}
-\end{equation}
-$$
-This is the **Fokker-Planck equation**. Setting $U = 0$ (target = uniform / maximum entropy) recovers the **heat equation** $\pd t \rho = \Delta \rho$: diffusion is the Wasserstein gradient flow of entropy.
+The Wasserstein gradient is a **score difference**. Gradient descent velocity: $v = s_P - s_{Q_\theta}$. Particles flow in the direction where the data score exceeds the model score. This is exactly the drifting field's structure — but it requires $\nabla \log P$, the data score. With empirical samples (Diracs), this is undefined: the **Dirac trap** that we return to in [the next section](#why-not-kl-the-dirac-trap).
 :::
 
-:::remark[Two descriptions, one physics]
-On the manifold $\mathcal W_2$, the Fokker-Planck flow is **deterministic**: the entire distribution $\rho_t$ slides smoothly down the KL landscape toward $\rho_\infty$. In the sample space $\R^n$, the same process looks **stochastic**: individual particles follow Langevin dynamics $dx = -\nabla U\, dt + \sqrt{2}\, dW_t$, kicked by Brownian noise. Same physics, two complementary descriptions.
-:::
+### Proving Otto's theorem
+
+We need to show that $v = \nabla_x \frac{\delta \mathcal F}{\delta P}$ satisfies the gradient definition for all test tangent vectors $u = \nabla\psi \in T_P\mathcal W_2$.
+
+By the gradient definition, $v = \mrm{grad}_W\mathcal F$ is the unique tangent vector satisfying
+$$
+    \df d{d\epsilon}\mathcal F(P + \epsilon\,\delta P)\Big|_{\epsilon=0} = \la u, v\ra_W = \int \la u, v\ra\, dP
+$$
+for all test velocities $u$, where $\delta P$ is the perturbation of $P$ induced by flowing along $u$. By the continuity equation, an infinitesimal flow along $u$ produces perturbation $\delta P = \pd t P= -\nabla \cdot (P\, u)$. By the definition of the functional derivative,
+$$
+    \df d{d\epsilon}\mathcal F(P + \epsilon\,\delta P)\Big|_{\epsilon=0} \equiv \int \frac{\delta \mathcal F}{\delta P}\,\delta P\, dx = -\int \frac{\delta \mathcal F}{\delta P}\,\nabla\cdot(P\, u)\, dx
+$$
+Apply the divergence theorem, the boundary term vanishes by
+$$
+\begin{aligned}
+    &= \cancel{-\int \nabla \cdot \!\left[\frac{\delta \mathcal F}{\delta P}\, P\, u\right] dx} \;+\; \int u\cdot \nabla \left(\frac{\delta \mathcal F}{\delta P}\right)\, dP \\
+    &= \int \la u,\, \nabla\frac{\delta \mathcal F}{\delta P}\ra\, dP \implies \mathrm{grad}_W(\mathcal F) := v = \nabla \left(\dfrac{\delta \mathcal F}{\delta P}\right) \,\, \square
+\end{aligned}
+$$
 
 ## Drifting as MLE
 
