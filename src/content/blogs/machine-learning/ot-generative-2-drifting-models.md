@@ -12,8 +12,8 @@ We currently have a mechanical interpretation -- the loss going to zero produces
 
 For those looking for novel content, the main results of this post are as follows:
 
-1. [**Statistical interpretation of Gaussian drifting**](#gaussian-kernel-smoothing-implements-reverse-kl): we show that drifting with a Gaussian kernel implements Wasserstein gradient descent on the reverse, mode-seeking KL divergence $\mrm{KL}(\tilde q \| \tilde p)$ between KDE-smoothed distributions.
-2. [**Maximum likelihood modification**](#proposition-maximum-likelihood-drifting): we derive the drifting field for the forward KL (maximum likelihood) objective $\mrm{KL}(\tilde p \| \tilde q)$. The changes to the current paradigm are minimal: reweigh by the density ratio $Z_p/Z_q$ and use the Gaussian (instead of Laplace) kernel. The resulting drifting field is notably not antisymmetric.
+1. [**Statistical interpretation of Gaussian drifting**](#gaussian-kernel-smoothing-implements-reverse-kl): we show that drifting with a Gaussian kernel implements Wasserstein gradient descent on the reverse, mode-seeking KL divergence $\mrm{KL}(\tilde q_\theta \| \tilde p_{\mathrm{data}})$ between KDE-smoothed distributions.
+2. [**Maximum likelihood modification**](#proposition-maximum-likelihood-drifting): we derive the drifting field for the forward KL (maximum likelihood) objective $\mrm{KL}(\tilde p_{\mathrm{data}} \| \tilde q_\theta)$. The changes to the current paradigm are minimal: reweigh by the density ratio $Z_p/Z_q$ and use the Gaussian (instead of Laplace) kernel. The resulting drifting field is notably not antisymmetric.
 
 ## Contents
 
@@ -46,7 +46,20 @@ $$
         f_\theta(\epsilon) + V_{p, q_\theta}(f_\theta(\epsilon))
     \right]^2
 $$
-Note that $p=q \implies \mathcal L=0$.
+Note that $p=q \implies \mathcal L=0$. Further note that if $V = \nabla \varphi$, then
+$$
+\begin{aligned}
+    \nabla_\theta \mathcal L
+    &\propto
+    \nabla_\theta \mathbb E_{\epsilon \sim P_{\mathrm{noise}}} \left[J_{f_\theta}^T\left[
+        f_\theta(\epsilon) - f_\theta(\epsilon) + \nabla_{f_\theta(\epsilon)} \varphi(f_\theta(\epsilon))
+    \right]\right] \\
+    &= \nabla_\theta \mathbb E_{\epsilon \sim P_{\mathrm{noise}}} \left[
+        J_{f_\theta}^T \nabla \varphi
+    \right]
+\end{aligned}
+$$
+> The stop-grad loss exactly implements the pullback of the gradient. If $V$ is a gradient on sample space $\R^n$, then $\nabla_\theta \mathcal L$ is the pullback of the gradient in parameter space.
 
 ### The drifting field
 
@@ -59,12 +72,12 @@ $$
     V_{p,q}(x)
     &=
     \underbrace{\frac{1}{Z_p(x)}\E_{y^+\sim p}\!\left[k(x, y^+)(y^+ - x)\right]}_{V_p^+(x):\;\text{attraction to data}} \;-\; \underbrace{\frac{1}{Z_q(x)}\E_{y^-\sim q}\!\left[k(x, y^-)(y^- - x)\right]}_{V_q^-(x):\;\text{repulsion from model}} \\
-    &= \dfrac{1}{Z_pZ_q} \mathbb E_{y^+\sim p, y^-\sim q} \left[
-        k(x, y^+) k(x, y^-)(y^+ - y^-)
+    &= \mathbb E_{y^+\sim p, y^-\sim q} \left[
+        \dfrac{k(x, y^+) k(x, y^-)}{Z_pZ_q}(y^+ - y^-)
     \right]
 \end{aligned}
 $$
-The kernel is Laplace-weighted
+The authors chose the Laplace kernel
 $$
     k(x,y) = \exp(-\|x - y\|/\tau)
 $$
@@ -73,10 +86,6 @@ $$
     Z_p(x) = \E_{y^+\sim p}[k(x, y^+)], \quad Z_q(x) = \E_{y^-\sim q}[k(x, y^-)]
 $$
 :::
-Let's unpack this, $k(x, y^{\pm})$ is a smoothing kernel over samples of $y^\pm - x$. In the large-sample precise limit $\tau\to 0$, we obtain
-$$
-    \mathbb E_{x\sim q} [V_p^+(x)] = \mathbb E_{x\sim q, y^+\sim p} (y^+ - x)
-$$
 
 
 ## Wasserstein Gradient Flow
