@@ -1,8 +1,9 @@
 ---
 import { getCollection } from 'astro:content';
 import BaseLayout from '../../layouts/BaseLayout.astro';
+import { filterVisibleBlogs } from '../../utils/blogVisibility';
 
-const entries = await getCollection('blogs');
+const entries = filterVisibleBlogs(await getCollection('blogs'));
 const toIsoDate = (value: Date) => value.toISOString().slice(0, 10);
 
 const sortedEntries = [...entries].sort((a, b) => b.data.date.getTime() - a.data.date.getTime());

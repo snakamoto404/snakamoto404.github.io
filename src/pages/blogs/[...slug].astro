@@ -3,9 +3,10 @@ import type { CollectionEntry } from 'astro:content';
 import { getCollection } from 'astro:content';
 import GiscusComments from '../../components/GiscusComments.astro';
 import BaseLayout from '../../layouts/BaseLayout.astro';
+import { filterVisibleBlogs } from '../../utils/blogVisibility';
 
 export async function getStaticPaths() {
-  const entries = await getCollection('blogs');
+  const entries = filterVisibleBlogs(await getCollection('blogs'));
 
   return entries.map((entry) => ({
     params: { slug: entry.slug },
