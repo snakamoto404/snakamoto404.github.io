@@ -17,6 +17,7 @@ For those looking for novel content, the main results of this post are as follow
 
 ## Contents
 
+- [Contents](#contents)
 - [Formulation](#formulation)
   - [The drifting field](#the-drifting-field)
 - [Wasserstein Gradient Flow](#wasserstein-gradient-flow)
@@ -328,12 +329,12 @@ What does this mean in practice? The changes to the existing training protocol a
 3. Form drifted targets $\hat x_j = x_j + \frac{Z_p(x_j)}{Z_q(x_j)} \cdot V_{p,q}(x_j)$. That is, scale the drifting field by the density ratio.
 4. Same.
 
-| | **Deng et al.** | **MLE modification** |
-|---|---|---|
-| Kernel | Laplace $e^{-\|x-y\|/\tau}$ | Gaussian $e^{-\|x-y\|^2/2\tau^2}$ |
-| Drifting field | $V_{p,q}$ | $\frac{Z_p}{Z_q} \cdot V_{p,q}$ |
-| Antisymmetric? | Yes | No |
-| Functional minimized | $\approx$ Reverse KL (mode-seeking) | Forward KL (mass-covering, MLE) |
+|                      | **Deng et al.**                     | **MLE modification**              |
+| -------------------- | ----------------------------------- | --------------------------------- |
+| Kernel               | Laplace $e^{-\|x-y\|/\tau}$         | Gaussian $e^{-\|x-y\|^2/2\tau^2}$ |
+| Drifting field       | $V_{p,q}$                           | $\frac{Z_p}{Z_q} \cdot V_{p,q}$   |
+| Antisymmetric?       | Yes                                 | No                                |
+| Functional minimized | $\approx$ Reverse KL (mode-seeking) | Forward KL (mass-covering, MLE)   |
 
 Several qualitative differences are worth noting:
 

@@ -1,10 +1,10 @@
 ---
-title: "OT for generative modeling 3 — Diffusion as Wasserstein Gradient Flow"
+title: "OT for generative modeling 3 — Diffusion as Maximum Likelihood Estimation"
 date: 2026-03-01
-summary: "We unpack diffusion under the Wasserstein geometry and show that it's maximum likelihood."
+summary: "We derive the interpretation of physical diffusion as Wasserstein gradient flow, noise-spectrum decomposition of KL-divergence, diffusion models as MLE, and unify ODE-based flow matching and SDE-based diffusion. Honorable mentions to Fokker-Planck, Anderson's theorems, de Bruijin identity, and Tweedie's formula."
 ---
 
-
+Todo for myself later: look into diffusion as optimal Bayes engine (Polyanskiy).
 
 ## Contents
 
@@ -15,10 +15,12 @@ summary: "We unpack diffusion under the Wasserstein geometry and show that it's 
   - [Diffusion as Wasserstein gradient flow](#diffusion-as-wasserstein-gradient-flow)
   - [Bonus: Anderson's theorem](#bonus-andersons-theorem)
 - [MLE interpretation of diffusion models](#mle-interpretation-of-diffusion-models)
-  - [Gradient flow dissipation](#gradient-flow-dissipation)
-  - [Single-variable warmup](#single-variable-warmup)
-  - [De Bruijin full proof](#de-bruijin-full-proof)
-  - [Perspectives on diffusion models](#perspectives-on-diffusion-models)
+  - [the dynamic de Bruijn identity](#the-dynamic-de-bruijn-identity)
+  - [Application to various processes.](#application-to-various-processes)
+    - [Heat process](#heat-process)
+    - [Variance-preserving process](#variance-preserving-process)
+  - [Tweedie's formula and flow matching](#tweedies-formula-and-flow-matching)
+    - [The optimal transport ODE process](#the-optimal-transport-ode-process)
 
 ## Physics of diffusion
 
@@ -183,7 +185,7 @@ $$
 
 ### Diffusion as Wasserstein gradient flow
 
-In this subsection, we'll endow the Fokker-Planck equation with macroscopic purpose.
+In this subsection, we'll endow the Fokker-Planck (diffusion) equation with a macroscopic interpretation.
 This exemplifies the theme that **Wasserstein geometry connects microscopic, particle-level evolution
 with distribution-level extremization**. Let's begin with a special case:
 
@@ -326,49 +328,234 @@ $$
 
 In this section, we provide a first-principles, maximum likelihood interpretation of diffusion generative models by applying the (dynamic) de Bruijn identity. This is the crux behind the celebrated paper [maximum likelihood training of score-based diffusion models](https://arxiv.org/pdf/2101.09258).
 
-The maximum likelihood objective $D(p_{\mathrm{data}} \| q_{\mathrm{model}})$ is prone to divergence when the support of $q_{\mathrm{model}}$ does not cover $p_{\mathrm{data}}$. The de Bruijn identity breaks down maximum likelihood into score matching over a trajectory and "hides" this divergence in a controllable limit of the integral.
+The maximum likelihood objective $D(p_{\mathrm{data}} \| q_{\mathrm{model}})$ is prone to divergence when the support of $q_{\mathrm{model}}$ does not cover $p_{\mathrm{data}}$. The de Bruijn identity **decomposes maximum likelihood into score matching over a noise spectrum**, allowing us to attenuate divergence in a controllable limit of the integral.
 
+### the dynamic de Bruijn identity
 
-:::theorem[the dynamic de Bruijn Identity]
-Let $p_t, q_t$ be probability distributions over $\mathbb{R}^n$ evolving over time $t \in [0, 1]$. Assume both distributions evolve according to the same heat equation with scaling factor $g(t)$:
+Recall the definition of the Riemannian gradient:
 $$
-\partial_t p_t = \frac{g(t)^2}{2} \Delta p_t \quad \text{and} \quad \partial_t q_t = \frac{g(t)^2}{2} \Delta q_t
+    \la \nabla \mathcal F(\gamma_t), \dot \gamma_t\ra = \dfrac{d}{dt} \mathcal F(\gamma_t)
 $$
-with boundary conditions $p_1 = p$, $q_1 = q$, and $p_0 = q_0$. Then the KL divergence decomposes as:
-<span id="eq-de-bruijn"></span>
+Consider the product manifold $\mathcal W \times \mathcal W$ equipped with the standard product metric, where $\dot p_1, \dot q_1, \dot p_2, \dot q_2$ are tangent vectors on the components:
+$$
+    \la \dot p_1\oplus \dot q_1, \dot p_2\oplus \dot q_2\ra_{\mathcal W\times \mathcal W} = \la \dot p_1, \dot q_1\ra + \la \dot p_2, \dot q_2\ra
+$$
+Define the functional $D(p \| q)$ on the product manifold $\mathcal W\times \mathcal W$. The Wasserstein gradient factors (note that $\nabla_p$ denotes the Wasserstein gradient w.r.t. $p$):
+$$
+    \nabla_{pq} D(p \| q) = \nabla_p D(p \| q) \oplus \nabla_q D(p \| q)
+$$
+Given trajectories $p_t, q_t$, we have
+$$
+\begin{aligned}
+    \dfrac{d}{dt} D(p_t \| q_t)
+    &=
+    \la \nabla_p D(p_t \| q_t) \oplus \nabla_q D(p_t \| q_t)
+    , \dot p_t \oplus \dot q_t \ra  \\
+    &= \la \nabla_p D(p_t \| q_t), \dot p_t\ra + \la \nabla_q D(p_t \| q_t), \dot q_t\ra \\
+    &= \la \nabla \log p_t - \nabla \log q_t, \dot p_t\ra - \la \dfrac{q_t}{p_t} \left(\nabla \log p_t - \nabla \log q_t\right), \dot q_t\ra \\
+    &= \int \la \nabla \log p_t - \nabla \log q_t, \dot p_t\ra\, dp_t - \int \la \nabla \log p_t - \nabla \log q_t, \dot q_t\ra\, dp_t \\
+    &= \mathbb E_{p_t} \la \nabla \log p_t - \nabla \log q_t, \dot p_t - \dot q_t\ra
+\end{aligned}
+$$
+Note that the integral and gradient are over $x\in \R^n$ in sample space.
+This is the general dynamic de Bruijn's identity: it's just the gradient expansion of the KL-divergence on product manifold.
+
+:::theorem[the dynamic de Bruijn identity]
+Given distribution trajectories $p_t, q_t\in \mathcal W$, the KL divergence rate of change is given by
+
+<span id="eq-debruijn"></span>
+
 $$
 \begin{equation}
-D(p_1 \| q_1) = \frac{1}{2} \int_0^1 g(t)^2 \mathbb{E}_{x \sim p_t} \left\| \nabla \log p_t(x) - \nabla \log q_t(x) \right\|^2\, dt
-\label{eq:de-bruijn}
+    \dfrac d {dt} D(p_t \| q_t) = \mathbb E_{p_t} \la \nabla \log p_t - \nabla \log q_t, \dot p_t - \dot q_t\ra
+\label{eq:debruijn}
 \end{equation}
 $$
 :::
 
-This identity transforms the **distribution-level divergence** $D(p \| q)$, which may be infinite when supports don't overlap, into a **time-averaged score-matching objective** that remains well-defined along the diffusion path.
+### Application to various processes.
 
-We prove this by noting a trivial gradient flow dissipation identity and applying it to the special case of Wasserstein geometry. We prove the single-variate de Bruijn identity then allow both $p_t, q_t$ to vary using a product manifold.
+The variance exploding process injects Gaussian noise without attenuating the original signal. It's simply the heat equation with variable diffusion constant.
 
-### Gradient flow dissipation
+In this section, we consider three common process and the application of theorem $\eqref{eq:debruijn}$ to each:
 
-The dynamic De Bruijin identity can look much more daunting than the general statement, so we begin with the more intuitive general statement:
+1. The <u>heat process</u> with noise schedule $g_t$. it's defined on $t\in [0, \infty)$ and the variance of the marginal explodes.
+2. The <u>variance preserving process</u>, defined on $t\in [0, \infty)$ and $p_\infty\to \mathcal N(0, I)$.
+3. The <u>compact process</u> (custom naming), defined on $t\in [0, 1]$ and $p_1\to \mathcal N(0, I)$. It's simply a rescaling of the variance-preserving process.
 
-:::definition[gradient flow dissipation]
-Given a Riemann manifold $\mathcal M$ with gradient $\nabla$, and a scalar function $\mathcal F:\mathcal M\to \R$, for a gradient flow trajectory $\gamma_{t\in [0, 1]}\in \mathcal M$ satisfying $\dot \gamma_t = -\nabla \mathcal F(\gamma_t)$, the scalar function dissipates according to:
+#### Heat process
+
+:::definition[heat process]
+The variance-exploding process is defined to obey the SDE:
 $$
-    \dfrac{d}{dt} \mathcal F(\gamma_t) = - \| \nabla \mathcal F(\gamma_t) \|^2
+    dX_t = g_t\, dW_t
 $$
-Note that the norm $\|\cdot \|^2$ is under the manifold metric, and that the gradient is the Riemann gradient defined by the metric:
+Also recall its Wasserstein gradient
 $$
-    \la \nabla \mathcal F(\gamma_t), \dot \gamma_t\ra = \dfrac{d}{dt} \mathcal F(\gamma_t)
+    \pd t \rho_t = -\nabla \cdot (\rho v), \quad v(x) = -\dfrac{g_t^2}{2} \nabla \log \rho(x)
+$$
+Here, $g_t$ is also known as **the noise schedule**. Denote the accumulated variance as $\sigma^2_t$, then the marginal distribution is
+$$
+    \rho(x_t\mid x_0) = \mathcal N(x_t; x_0, \sigma^2_tI), \quad \sigma^2_t = \int_0^t\, g_s^2\, ds
+$$
+If $p_t, q_t$ are both subject to the VE process, substituting the dynamic de Bruijn identity yields
+
+<span id="eq-heat-debruijn"></span>
+$$
+\begin{equation}
+\begin{aligned}
+    D(p_0 \| q_0)
+    &= D(p_T \| q_T) - \int_0^T \mathbb E_{p_t} \la \nabla \log p_t - \nabla \log q_t, \dot p_t - \dot q_t\ra\, dt \\
+    &= D(p_T \| q_T) + \dfrac 1 2 \int_0^T g_t^2 \cdot \mathbb E_{x\sim p_t} \| \nabla \log p_t(x) - \nabla \log q_t(x) \|^2\, dt
+\end{aligned}
+\label{eq:heat-debruijn}
+\end{equation}
+$$
+Sometimes this specialized result is known as the dynamic de Bruijn identity.
+:::
+
+:::remark
+The equation $\eqref{eq:heat-debruijn}$ demonstrates a fundamental interpretation of the de Bruijn identity. Note the Euclidean score matching loss $\|\nabla \log p_t - \nabla \log q_t\|$. This term is well-defined for all $t>0$. The divergence of disjoint support is hidden in the tail $t\to 0$. We have expanded the KL divergence as score matching over a full noise spectrum.
+:::
+
+#### Variance-preserving process
+
+:::definition[variance-preserving process]
+The variance-preserving (VP) process is defined by the following SDE with noise schedule $\beta_t$:
+$$
+    dX_t = -\dfrac 1 2 \beta_t X_t\, dt + \sqrt{\beta_t}\, dW_t
+$$
+By Fokker-Planck, the equivalent velocity field dictating Wasserstein gradient flow is
+$$
+    v(x) = -\dfrac 1 2 \beta_t \left(x - \nabla \log \rho\right)
+$$
+It's related to the heat process up to a time-dependent rescaling of sample space scale. The conditional distribution is
+$$
+    \rho(x_t \mid x_0) = \mathcal N\left(x_t; \sqrt{\alpha_t} x_0, (1-\alpha_t) I\right), \quad \alpha_t = e^{-\int_0^t \beta_s\, ds}
+$$
+Substituting into the dynamic de Bruijn identity, the drift terms magically cancel and terminal divergence vanishes at $t\to \infty$, yielding
+$$
+    D(p_0 \| q_0) = \dfrac 1 2 \int_0^\infty \beta_t \cdot \mathbb E_{p_t} \| \nabla \log p_t - \nabla \log q_t \|^2\, dt
 $$
 :::
-The proof is a trivial application of the standard chain rule (think in Euclidean space):
+
+:::remark[interpretation as OU-process]
+The variance-preserving process is related to the Ornstein-Uhlenbeck process, which is the canonical continuous-time model for mean-reverting behavior given by
 $$
-    \dfrac{d}{dt} \mathcal F(\gamma_t) = \la \nabla \mathcal F(\gamma_t), \dot \gamma_t \ra = -\| \nabla \mathcal F(\gamma_t)\|^2
+    dX_t = \theta(\mu - X_t)\, dt + \sigma\, dW_t, \quad \theta, \sigma>0
+$$
+Here $\mu$ is long-term mean, $\theta$ is restorative strength, and $\sigma$ volatility.
+:::
+
+### Tweedie's formula and flow matching
+
+Tweedie's formula states that for processes with Gaussian noise, the true posterior mean (optimal denoiser) can be computed purely from **the score of the marginal distribution**.
+
+Application of this formula sheds light on the fundamntal unification of ODE-style flow matching and SDE-style diffusion fundamentally as maximum likelihood estimation via flow matching. It unifies the following objectives:
+
+1. Predicting the score
+2. Predicting the posterior mean (denoising)
+3. Predicting the denoising vector field.
+
+:::theorem[Tweedie's formula]
+Let $z\sim P_z$ be an unobserved true signal with an arbitrary prior, then
+$$
+    x\mid z\sim \mathcal N(\alpha z, \Sigma) \implies \alpha \mathbb E[z\mid x] = x + \Sigma \nabla \log \rho
+$$
+where $\rho$ is the marginal distribution of $x$ and $\alpha\neq 0$.
+:::
+
+<details>
+<summary>Proof sketch: substitute the Gaussian conditional score formula</summary>
+
+Without loss of generality we can substitute $z=\alpha z$ so $\alpha=1$. First compute the conditional distribution and score:
+$$
+\begin{aligned}
+    p(x\mid z)
+    &\propto \exp \left[-\dfrac 1 2 (x-z)^T \Sigma^{-1}(x-z)\right]  \\
+    \nabla p(x\mid z) &= -p(x\mid z) \Sigma^{-1}(x-z)
+\end{aligned}
+$$
+Substitute into the score:
+$$
+\begin{aligned}
+    \nabla \log \rho(x)
+    &= \df 1 {\rho(x)} \int \nabla p(x\mid z) p(z)\, dz \\
+    &= - \df 1 {\rho(x)} \int \Sigma^{-1}(x-z) \cdot p(x\mid z) p(z)\, dz \\
+    &= \int \Sigma^{-1}(z-x) p(z\mid x)\, dz \\
+    &= \mathbb E_{z\mid x} \Sigma^{-1}(x - z) = \Sigma^{-1}\left(x - \mathbb E[z\mid x]\right)
+\end{aligned}
 $$
 
-### Single-variable warmup
+Rearranging yields the result. $\square$
 
-### De Bruijin full proof
+</details>
 
-### Perspectives on diffusion models
+:::remark
+This is a highly nontrivial theorem. In general, posterior quantities depend on the prior distribution of $z$. Here, the key property $\nabla_x p(x\mid z) = -p(x\mid z)\Sigma^{-1}(x-z)$ provided the closed-form $p(x\mid z)$ which can be rearranged into $p(z\mid x)$.
+:::
+
+Next, let's consider compact $t\in [0, 1]$ with $t=0$ being data / model boundary distribution, and $t=1$ being $\mathcal N(0, I)$. Recall in [Part 1](/blogs/machine-learning/ot-generative-1-wasserstein-geometry/#unifying-static-and-dynamical-perspectives) that the Wasserstein-2 geodesic distance is realized by straight-line transport. Solving this ODE corresponds to flow matching, and we derive the de Bruijin MLE interpretation below:
+
+#### The optimal transport ODE process
+
+:::definition[the optimal transport ODE process]
+Recalling our discussion of the optimal transport field from [Part 1](/blogs/machine-learning/ot-generative-1-wasserstein-geometry/#from-particles-to-fluid), the optimal transport macroscopic flow field is
+$$
+    dX_t = v_t(X_t)\, dt, \quad v_t(x) = \mathbb E[X_1 - X_0 \mid X_t = x]
+$$
+The conditional distribution family is standard-deviation preserving, not variance preserving
+$$
+    \rho(x_t\mid x_0) = \mathcal N\left(x_t; (1-t) x_0, t^2I\right)
+$$
+We're free to introduce Brownian motion according to any schedule $g_t$:
+$$
+    dX_t = \left[v_t(X_t) + \dfrac{g_t^2}{2} \nabla \log \rho_t(X_t)\right] + g_t\, dW_t
+$$
+The dynamic de Bruijin identity applies either way, with $D(p_1 \| q_1) = 0$:
+$$
+    \dfrac{d}{dt} D(p_t \| q_t) = \int_0^1 \mathbb E_{p_t} \la \nabla \log p_t - \nabla \log q_t, v^p_t - v^q_t\ra \, dt
+$$
+:::
+
+Unlike the previous VE and VP processes, the OT process doesn't appear to have closed forms so far. But we can obtain closed form using Tweedie's formula.
+
+Use Tweedie to obtain the optimal posterior boundary target estimate given intermediate noisy sample $x_t$:
+$$
+\begin{aligned}
+    \mathbb E[(1-t) x_0 \mid x_t]
+    &= x_t + t^2 \nabla \log \rho_t(x_t)  \\
+    \hat x_0(x_t, t) &:= \mathbb E[x_0 \mid x_t]
+    = \dfrac{x_t + t^2 \nabla \log \rho_t(x_t)}{1-t}
+\end{aligned}
+$$
+:::remark[estimate v. transport]
+Note that if $x_0\sim p$ are e.g. images, then $x_0$ are generally sharp images, while the estimates $\hat x_0$ are generally blurry means. In particular, $\hat x_0(x_1\sim p_1)$ is just the unconditional mean.
+:::
+We can use this to entirely rewrite $v_t$ using
+$$
+    x_t = \bar t x_0 + tx_1 \implies t v_t(x_t) = x_t - \hat x_0(x_t, t)
+$$
+Substituting $\hat x_0$ yields the macroscopic field
+
+:::proposition[optimal transport closed-form formulas]
+Given the optimal transport process with conditional distribution
+$$
+    \rho(x_t\mid x_0) = \mathcal N\left(x_t; (1-t) x_0, t^2I\right)
+$$
+The straight-line transport ODE is driven by the field
+$$
+    v_t(x_t) = -\left(
+        \dfrac{1}{1-t} x_t + \dfrac{t}{1-t} \nabla \log \rho_t(x_t)
+    \right)
+$$
+The drift terms cancel in $v^p_t - v^q_t$ and $D(p_1 \| q_1)=0$, so we obtain the KL decomposition
+$$
+    D(p_0 \| q_0)
+    = \dfrac{t}{1-t} \int_0^1 \mathbb E_{p_t} \|\nabla \log p_t - \nabla \log q_t\|^2\, dt
+$$
+:::
+
+:::remark
+This proves that flow matching is MLE.
+:::
