@@ -4,7 +4,19 @@ date: 2026-03-01
 summary: "We derive the interpretation of physical diffusion as Wasserstein gradient flow, noise-spectrum decomposition of KL-divergence, diffusion models as MLE, and unify ODE-based flow matching and SDE-based diffusion. Honorable mentions to Fokker-Planck, Anderson's theorems, de Bruijin identity, and Tweedie's formula."
 ---
 
-Todo for myself later: look into diffusion as optimal Bayes engine (Polyanskiy).
+This part uses the Wasserstein toolkit we've developed in parts 0 and 1 (links) to unpack the dominant generative paradigm from first principles.
+We begin with some physics on Brownian motion and stochastic processes, highlights include:
+
+- **Brownian motion $\leftrightarrow$ score flow** provides the fundamental bridge between SDE and ODE formulations as well as a valuable perspective on the score-ODE which shows up everywhere in generative modeling.
+  - As a corollary, we prove **Anderson's theorem** which allows one to run a SDE backwards in time.
+- Unifying microscopic particle movement with macroscopic, thermodynamic optimization: diffusion with drift (Fokker-Planck) as Wasserstein gradient descent.
+
+We conclude with a first principles, maximum likelihood interpretation of diffusion and flow matching models.
+
+- The **dynamic de Bruijin** provides a canonical noise-spectral decomposition of KL-divergence.
+- **Tweedie's formula** provides one perspective on why Gaussian noise is canonical and unifies vector field estimation and score matching.
+
+Later todo for myself: look into diffusion as optimal Bayes engine (Polyanskiy).
 
 ## Contents
 
@@ -21,6 +33,14 @@ Todo for myself later: look into diffusion as optimal Bayes engine (Polyanskiy).
     - [Variance-preserving process](#variance-preserving-process)
   - [Tweedie's formula and flow matching](#tweedies-formula-and-flow-matching)
     - [The optimal transport ODE process](#the-optimal-transport-ode-process)
+
+<!-- A clarifying point: diffusion is a heavily loaded word, it could mean any of the following:
+
+1. Brownian motion of particles $dX_t = g\, dW_t$.
+2. Brownian motion of particles with drift.
+3. The diffusion equation (Fokker-Planck) [eqref]
+4. Fokker-planck based SDE generative models.
+5. The wide class of flow matching ODE and diffusion SDE generative models. -->
 
 ## Physics of diffusion
 
@@ -451,7 +471,7 @@ Here $\mu$ is long-term mean, $\theta$ is restorative strength, and $\sigma$ vol
 
 Tweedie's formula states that for processes with Gaussian noise, the true posterior mean (optimal denoiser) can be computed purely from **the score of the marginal distribution**.
 
-Application of this formula sheds light on the fundamntal unification of ODE-style flow matching and SDE-style diffusion fundamentally as maximum likelihood estimation via flow matching. It unifies the following objectives:
+Application of this formula sheds light on the fundamental unification of ODE-style flow matching and SDE-style diffusion as maximum likelihood estimation via flow matching. It unifies the following objectives:
 
 1. Predicting the score
 2. Predicting the posterior mean (denoising)
@@ -549,10 +569,10 @@ $$
         \dfrac{1}{1-t} x_t + \dfrac{t}{1-t} \nabla \log \rho_t(x_t)
     \right)
 $$
-The drift terms cancel in $v^p_t - v^q_t$ and $D(p_1 \| q_1)=0$, so we obtain the KL decomposition
+The drift terms cancel in $v^p_t - v^q_t$ and $D(p_1 \| q_1)=0$, yielding the KL decomposition
 $$
     D(p_0 \| q_0)
-    = \dfrac{t}{1-t} \int_0^1 \mathbb E_{p_t} \|\nabla \log p_t - \nabla \log q_t\|^2\, dt
+    = \int_0^1 \dfrac{t}{1-t} \mathbb E_{p_t} \|\nabla \log p_t - \nabla \log q_t\|^2\, dt
 $$
 :::
 

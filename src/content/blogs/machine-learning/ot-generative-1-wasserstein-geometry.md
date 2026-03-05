@@ -1,7 +1,7 @@
 ---
 title: "OT for generative modeling 1 — the Wasserstein geometry"
 date: 2026-02-23
-summary: "We construct the Wasserstein manifold from first principles: probability distributions as points, vector fields as tangent vectors, and the density-weighted inner product that turns optimal transport into Riemannian geometry."
+summary: "We construct the Wasserstein manifold from first principles: probability distributions as points, sample-space vector fields as tangent vectors, the density-weighted inner product that endows optimal transport with a rich Riemannian geometry. Physics-intuition on the Benamou-Brenier theorem which unifies static and Riemannian definitions."
 ---
 
 In [Part 0](/blogs/machine-learning/ot-generative-0-static/) we defined the Wasserstein distance: the cheapest way to rearrange one distribution into another. We now know *how much* it costs to move mass. But that framing treats distributions as static objects — you compare two of them, get a number, and that was it. However, transport is an inherently dynamical process; recall our water analogy, probability distributions can continuously flow. Guiding questions for this section:
@@ -13,9 +13,15 @@ Part 1 is notably denser than part 0, but also much the more beautiful. From now
 
 ## Contents
 
-- [The $\mathcal{W}_2$ manifold](#the-mathcalw_2-manifold): which **spaces** are we working in?
-- [The Wasserstein metric](#the-wasserstein-metric): dynamic definition of distance
-- [Unifying static and dynamical perspectives](#unifying-static-and-dynamical-perspectives): Benamou-Brenier
+- [The $\mathcal{W}_2$ manifold](#the-mathcalw_2-manifold)
+  - [Continuity equation, tangent space, vector fields](#continuity-equation-tangent-space-vector-fields)
+- [The Wasserstein metric](#the-wasserstein-metric)
+  - [Wasserstein length as free-fluid action](#wasserstein-length-as-free-fluid-action)
+- [Unifying static and dynamical perspectives](#unifying-static-and-dynamical-perspectives)
+  - [Single-particle least action](#single-particle-least-action)
+  - [Boundary conditions vs. transport plans](#boundary-conditions-vs-transport-plans)
+  - [The nested decomposition](#the-nested-decomposition)
+  - [From particles to fluid](#from-particles-to-fluid)
 
 ## The $\mathcal{W}_2$ manifold
 
