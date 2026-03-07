@@ -40,12 +40,12 @@ In this generative paradigm, we're given samples from $P_{\mathrm{data}} \in \ma
 $$
     p := P_{\mathrm{data}}, \quad q_\theta := P_{\mathrm{model}, \theta}
 $$
-The work considers general antisymmetric drift fields $V_{p, q}: \mathbb R^d\to \mathbb R^d$; each field is a vector field on the sample space. The training loop consists of iteratively minimizing
+The work considers general antisymmetric drift fields $V_{p, q}: \mathbb R^n\to \mathbb R^n$; each field is a vector field on the sample space. The training loop consists of iteratively minimizing
 
 $$
     \mathcal L = \mathbb E_{\epsilon\sim P_{\mathrm{noise}}} \| f_\theta(\epsilon) - \text{stopgrad} \left[
         f_\theta(\epsilon) + V_{p, q_\theta}(f_\theta(\epsilon))
-    \right]^2
+    \right] \|^2
 $$
 Note that $p=q \implies \mathcal L=0$. Further note that if $V = \nabla \varphi$, then
 $$
@@ -64,7 +64,7 @@ $$
 
 ### The drifting field
 
-Let's consider the author's choice of the drifting field
+Let's consider the authors' choice of the drifting field
 :::definition[canonical drifting field]
 
 Consider the following antisymmetric drifting field evaluated at sample space $x\in \mathbb R^n$:
@@ -95,20 +95,20 @@ We take a step back to develop the theory of **Wasserstein gradient flow** (and 
 
 ### The Kullback-Leibler functional
 
-Fixing data distribution $p$, maximizing likelihood of the data under model is equivalent to maximizing the KL functional:
+Fixing data distribution $p$, maximizing likelihood of the data under the model is equivalent to minimizing the KL divergence:
 $$
 \begin{aligned}
     \mrm{KL}(P\|Q_\theta)
     &= \mathbb E_{x\sim P} \left[
-        \log \dfrac{Q_\theta(x)}{P(x)}
+        \log \dfrac{P(x)}{Q_\theta(x)}
     \right] \\
-    &= \mathbb E_{x\sim P} \log Q_\theta(x) - \mathbb E_{x\sim P}\log P(x)\\
-    &= \int dP\, \log Q - \int dP\, \log P
+    &= \mathbb E_{x\sim P} \log P(x) - \mathbb E_{x\sim P}\log Q_\theta(x)\\
+    &= \int dP\, \log P - \int dP\, \log Q
 \end{aligned}
 $$
 For more interesting properties of KL divergence, see [these notes](https://nlyu1.github.io/classical-info-theory/kullback-leibler-divergence.html). From a SGD perspective, minimizing KL is equivalent to maximizing likelihood when empirical samples are i.i.d from $P$:
 $$
-    \nabla_\theta \, \mathrm{KL}(P\|Q_\theta) = \nabla_\theta \mathbb E_{x\sim P} \, \log Q_\theta(x)
+    \nabla_\theta \, \mathrm{KL}(P\|Q_\theta) = -\nabla_\theta \mathbb E_{x\sim P} \, \log Q_\theta(x)
 $$
 
 
@@ -118,18 +118,18 @@ I like to interpret differential geometry as the "lifting" of Euclidean construc
 $$
     \df d {dt} f(\gamma(t)) = \dot \gamma(t) \cdot \nabla\big|_{\gamma(t)} f
 $$
-Lift the inner product to the manifold metric, can use this to define gradients on manifolds:
+Lifting the inner product to the manifold metric, we can use this to define gradients on manifolds:
 
 :::definition[Wasserstein gradients]
 
-Given a scalar function $f:\mathcal W_2\to \R$, the gradient of $f$ at the point $P\in \mathcal W_2$ is the unique tangent vector $v=\mathrm{grad}_W f(P)$ such that, for any curve $\gamma(t)$ with $\gamma(t)=x$, we have
+Given a scalar function $f:\mathcal W_2\to \R$, the gradient of $f$ at the point $P\in \mathcal W_2$ is the unique tangent vector $v=\mathrm{grad}_W f(P)$ such that, for any curve $\gamma(t)$ with $\gamma(0)=P$, we have
 $$
     \dfrac{d}{dt} f(\gamma(t)) = \la \dot \gamma(t), v\ra_W = \mathbb E_P \la \dot \gamma(t), v\ra
 $$
 where $\la\cdot, \cdot\ra_W$ is our familiar Wasserstein metric on $\mathcal W_2$, and $\la\cdot, \cdot\ra$ in the second equality is the familiar Euclidean metric, after we expanded the definition of the Wasserstein metric.
 :::
 
-Now, we're equipped to state a major result in [Otto calculus](https://www.math.toronto.edu/mccann/assignments/477/Otto01.pdf). We'll prove it shortly
+Now, we're equipped to state a major result in [Otto calculus](https://www.math.toronto.edu/mccann/assignments/477/Otto01.pdf). We'll prove it shortly.
 
 :::theorem[fundamental theorem of Otto calculus]
 Given a probability functional $\mathcal F:\mathcal W_2\to \R$, its Wasserstein gradient can be computed as
@@ -190,9 +190,12 @@ This is the **heat equation**: heat diffusion is Wasserstein gradient ascent of 
 
 Apply to $Q_\theta$ in $\mrm{KL}(P\|Q_\theta)$. From above, $\frac{\delta\mrm{KL}(P\|Q_\theta)}{\delta Q_\theta} = -P/Q_\theta$. Applying the theorem:
 $$
-    \mrm{grad}_W \mrm{KL}(P\|Q_\theta)\big|_{Q_\theta} = \nabla_x\!\left(-\frac{P}{Q_\theta}\right)
+\begin{aligned}
+    \mrm{grad}_W \mrm{KL}(P\|Q_\theta)\big|_{Q_\theta}
+    = \nabla_x\!\left(-\frac{P}{Q_\theta}\right)
+\end{aligned}
 $$
-Gradient descent velocity: $v = \nabla_x(P/Q_\theta)$. Particles flow toward regions where the **density ratio** $P/Q_\theta$ increases. In practice, the density ratio is expensive to estimate, which is one reason forward KL is rarely minimized by direct Wasserstein gradient descent.
+Gradient descent velocity: $v = \nabla_x(P/Q_\theta)$.
 :::
 
 :::example[applying Otto's theorem to reverse KL]
@@ -223,7 +226,7 @@ for all test velocities $u$, where $\delta P$ is the perturbation of $P$ induced
 $$
     \df d{d\epsilon}\mathcal F(P + \epsilon\,\delta P)\Big|_{\epsilon=0} \equiv \int \frac{\delta \mathcal F}{\delta P}\,\delta P\, dx = -\int \frac{\delta \mathcal F}{\delta P}\,\nabla\cdot(P\, u)\, dx
 $$
-Apply the divergence theorem, the boundary term vanishes by
+Applying the divergence theorem (the boundary term vanishes since $P$ and $u$ decay at infinity):
 $$
 \begin{aligned}
     &= \cancel{-\int \nabla \cdot \!\left[\frac{\delta \mathcal F}{\delta P}\, P\, u\right] dx} \;+\; \int u\cdot \nabla \left(\frac{\delta \mathcal F}{\delta P}\right)\, dP \\
@@ -273,7 +276,7 @@ The canonical drifting field is the negative Wasserstein gradient of the reverse
 $$
     V_{p,q} = \nabla \log \tilde p - \nabla \log \tilde q = V_p^+ - V_q^- = -\mrm{grad}_W\, \mrm{KL}(\tilde q \| \tilde p)
 $$
-Each training step executes the pullback of Wasserstein gradient descent on $\mrm{KL}(\tilde q \| \tilde p)$ in $\theta$-space.
+Each training step executes the Jacobian pullback $J^T_\theta g$ of the Wasserstein gradient descent $g$ w.r.t. $\mrm{KL}(\tilde q \| \tilde p)$.
 :::
 
 :::remark[the Laplace deviation]

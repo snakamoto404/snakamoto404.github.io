@@ -485,7 +485,10 @@ Application of this formula sheds light on the fundamental unification of ODE-st
 :::theorem[Tweedie's formula]
 Let $z\sim P_z$ be an unobserved true signal with an arbitrary prior, then
 $$
+\begin{equation}
     x\mid z\sim \mathcal N(\alpha z, \Sigma) \implies \alpha \mathbb E[z\mid x] = x + \Sigma \nabla \log \rho
+\label{eq:tweedie}
+\end{equation}
 $$
 where $\rho$ is the marginal distribution of $x$ and $\alpha\neq 0$.
 :::
@@ -528,76 +531,88 @@ Next, let's consider compact $t\in [0, 1]$ with $t=0$ being data / model boundar
 
 ### The flow matching process
 
-Recall two critical results from Part 1:
+<!-- Recall two critical results from Part 1:
 
-1. Given a transport plan (coupling $\pi(x, y)$), the optimal-transport flow which realizes the plan realizes straight-line transport.
-2. The Wasserstein-2 distance is realized by the optimal transport plan. By Banamou-Brenier, the straight-line transports which realize the optimal transport plan never intersect.
+1. Given a transport plan (coupling) $\pi(x, y)$, the optimal-transport flow which realizes the plan realizes straight-line transport.
+2. The Wasserstein-2 distance is realized by the optimal transport plan. By Banamou-Brenier, the straight-line transports which realize the optimal transport plan never intersect. -->
+
+We analyze the flow matching process by applying the following construction:
+
+1. We <span class="question">define</span> an independent coupling between data and i.i.d. Gaussian noise.
+2. Given the independent coupling, we <span class="question">define</span> straight-line transport <span class="question">conditioned upon endpoints</span>. This supplies the trivial endpoints-conditioned vector field.
+3. Using 1-2 above, we can derive the <span class="question">data-conditioned</span> vector field $v_t(x_t\mid x_0)$. This is a straight vector field.
+4. Using 3, we derive the marginal vector field $v_t(x_t)$. This <span class="question">is not a straight vector field</span>.
+5. Note that the <span class="question">noise-conditioned vector field</span> $v_t(x_t\mid x_1)$ is also not straight.
+
+It's extremely important to differentiate between vector fields by what they're conditioned on.
 
 :::definition[the flow matching ODE process]
 Fixing data (or model) distribution $p_0$ and stationary noise distribution $p_1=\mathcal N(0, I)$, flow matching uses **independent coupling** between noise and data:
 $$
     \pi(x_0, x_1) = p_0(x_0) p_1(x_1)
 $$
-Recalling our discussion of the optimal transport field from [Part 1](/blogs/machine-learning/ot-generative-1-wasserstein-geometry/#from-particles-to-fluid), the OT process **for the conditional coupling** is just straight line transport. The marginal vector field is
-$$
-    dX_t = v_t(X_t)\, dt, \quad v_t(x) = \mathbb E[X_1 - X_0 \mid X_t = x]
-$$
-The OT process **for this coupling** (note the scope!) has the following form:
-The conditional distribution family is
+Recalling our discussion of the optimal transport field from [Part 1](/blogs/machine-learning/ot-generative-1-wasserstein-geometry/#from-particles-to-fluid), the OT process **for the conditional coupling** implements straight line transport between endpoints.
+The conditional density implements linear interpolation between data sample and Gaussian noise:
 $$
     \rho_t(x_t\mid x_0) = \mathcal N\left(x_t; (1-t) x_0, t^2I\right)
 $$
-Applying the continuity equation and looking for a gradient field yields the conditional vector field: IMPORTANT: TODO
+:::
+
+The next step is deriving the conditional and marginal vector fields.
+
+Fixing both data $x_0$ and noise $x_1$, the vector field $v(x_t\mid x_0, x_1) = x_1 - x_0$ on valid interpolation $x_t = \bar t x_0 + tx_1$ [^elsewhere].
+
+:::proposition[data-conditioned flow-matching vector field]
+Fixing data $x_0$, the conditional vector field is straight-line: at $x_t$, the trajectory endpoint is $\mathbb E[x_1\mid x_t, x_0]$. The projected displacement, which gives velocity under straight-line transport, is the current displacement scaled by the time progress $1/t$.
 $$
 \begin{equation}
-    v_t(x_t\mid x_0) = \nabla \log \rho\implies \nabla \cdot v_t(x_t\mid x_0) + \pd t \rho_t(x_t\mid x_0) = 0
-    \label{eq:cdn-fm-velocity}
+\begin{aligned}
+    v_t(x_t\mid x_0)
+    &= \dfrac 1 t (x_t - x_0)
+\end{aligned}
+\label{eq:data-conditional-fn}
 \end{equation}
 $$
-The dynamic de Bruijin identity applies with $D(p_1 \| q_1) = 0$:
-
-$$
-    D(p_0 \| q_0) = \int_0^1 \mathbb E_{p_t} \la \nabla \log p_t - \nabla \log q_t, v^p_t - v^q_t\ra \, dt
-$$
 :::
-
-Unlike the previous VE and VP processes, the OT process doesn't appear to have closed forms so far. But we can obtain closed form using Tweedie's formula.
-
-Use Tweedie to obtain the optimal posterior boundary target estimate given intermediate noisy sample $x_t$:
+For general endpoints-conditioned transport to initial position conditioned transport, apply
 $$
+    v_t(x_t\mid x_0) = \int v_t(x_t\mid x_0, x_1)\, d\rho(x_1\mid x_t, x_0)
+$$
+
+Let's proceed to derive the marginal vector field. Recall the decomposition:
+$$
+\begin{equation}
+    v_t(x_t) = \int v_t(x_t\mid x_0) \, d\rho(x_0\mid x_t)
+\label{eq:marginal-vec}
+\end{equation}
+$$
+- LHS denotes the macroscopic fluid velocity at position $x_t$, time $t$.
+- Fluid at this space-time are composed of fluid initially starting across a range of initial positions $x_0$, each with their own velocity.
+- The RHS denotes an ensemble of particle velocity $v_t(x_t\mid x_0)$ from initial positions $x_0$, averaged by their constituent ratio $\rho(x_0\mid x_t)$.
+
+<span id="prp-fm"></span>
+:::proposition[flow matching formulas]
+Applying $\eqref{eq:marginal-vec}$ with $\eqref{eq:data-conditional-fn}$ yields
+$$
+\begin{equation}
 \begin{aligned}
-    \mathbb E[(1-t) x_0 \mid x_t]
-    &= x_t + t^2 \nabla \log \rho_t(x_t)  \\
-    \hat x_0(x_t, t) &:= \mathbb E[x_0 \mid x_t]
-    = \dfrac{x_t + t^2 \nabla \log \rho_t(x_t)}{1-t}
+    v_t(x_t)
+    &= \int \dfrac 1 t (x_t - x_0)\, d\rho(x_0\mid x_t) = \dfrac 1 t \left(x_t - \mathbb E[x_0 \mid x_t]\right)
 \end{aligned}
+\label{eq:fm-marginal-tweedie}
+\end{equation}
 $$
-:::remark[estimate v. transport]
-Note that if $x_0\sim p$ are e.g. images, then $x_0$ are generally sharp images, while the estimates $\hat x_0$ are generally blurry means. In particular, $\hat x_0(x_1\sim p_1)$ is just the unconditional mean.
-:::
-We can use this to entirely rewrite $v_t$ using
+This looks difficult, but luckily, the independent coupling + straight-line endpoint transport implies conditional Gaussian noise $x_t\mid x_0 \sim \mathcal N(\bar t x_0, t^2 I)$. Applying Tweedie $\eqref{eq:tweedie}$ yields
 $$
-    x_t = \bar t x_0 + tx_1 \implies t v_t(x_t) = x_t - \hat x_0(x_t, t)
+    \mathbb E[x_0\mid x_t] = \dfrac{x_t + t^2 \nabla \log p_t(x_t)}{1-t}
 $$
-Substituting $\hat x_0$ yields the macroscopic field
-
-<span id="prop-ot-closed-form"></span>
-
-:::proposition[optimal transport closed-form formulas]
-Given the optimal transport process with conditional distribution
-$$
-    \rho(x_t\mid x_0) = \mathcal N\left(x_t; (1-t) x_0, t^2I\right)
-$$
-The straight-line transport ODE is driven by the field
-
-<span id="eq-ot-velocity"></span>
-
+Simplify to obtain
 $$
 \begin{equation}
     v_t(x_t) = -\left(
-        \dfrac{1}{1-t} x_t + \dfrac{t}{1-t} \nabla \log \rho_t(x_t)
+        \dfrac{1}{1-t} x_t + \dfrac{t}{1-t} \nabla \log p_t(x_t)
     \right)
-\label{eq:ot-velocity}
+\label{eq:fm-marginal-velocity}
 \end{equation}
 $$
 The drift terms cancel in $v^p_t - v^q_t$ and $D(p_1 \| q_1)=0$, yielding the KL decomposition
@@ -611,52 +626,50 @@ $$
 $$
 :::
 
+:::remark[estimate v. transport]
+Note that if $x_0\sim p$ are e.g. images, then $x_0$ are generally sharp images, while the estimates $\hat x_0$ are generally blurry means. In particular, $\hat x_0(x_1\sim p_1)$ is just the unconditional mean.
+:::
+
+:::remark[straight vector fields]
+Note that the **data-conditioned** vector field $v_t(x_t\mid x_0)$ is straight. Similarly, the **noise-conditioned vector field** $v_t(x_t\mid x_1) = (x_1 - x_t) / \bar t$ is also straight. However, the marginal vector field $v_t(x_t)$ is not straight.
+:::
+
 ### Flow matching in practice
 
-Let's look at the [preceding proposition](#prop-ot-closed-form) operationally:
+Let's look at the [preceding proposition](#prp-fm) operationally:
 
-1. Straight-line ODE transport equation $\eqref{eq:ot-velocity}$ tells us that given the (noise) spectrum-indexed family of scores $\nabla \log \rho_t$, we can integrate $v_t(x_t)$ from $x_1$ to $x_0$ to generate a sample.
+1. Straight-line ODE transport equation $\eqref{eq:fm-marginal-velocity}$ tells us that given the (noise) spectrum-indexed family of scores $\nabla \log \rho_t$, we can integrate $v_t(x_t)$ from $x_1$ to $x_0$ to generate a sample.
 2. de Bruijn formula $\eqref{eq:fm-debruijn}$ tells us that minimizing score MSE yields maximum likelihood.
 
-If we're happy generating samples by integrating a vector field, we only need to approximate the score $\nabla \log p_t(x)$ by $f_\theta(x, t)$. This is a parameric density estimation problem. But the target looks intractable. Let's first decompose the marginal vector field into conditional ones:
-<span id="eq-vector-field-marginalization">
+If we're happy generating samples by integrating a vector field, we only need to approximate the score $\nabla \log p_t(x)$. This is a parameric density estimation problem. But the score target $\nabla \log p_t$ looks untractable.
+
+Our escape hatch is equation $\eqref{eq:fm-marginal-tweedie}$. Reparameterize $f_\theta(x, t) \approx \mathbb E_p[x_0\mid x_t]$, then the score of our generative model is
 $$
-\begin{equation}
+    \nabla \log q_t(x_t) = \dfrac 1 {t^2} \left[\bar t f_\theta(x_t) - x_t\right]
+$$
+:::remark
+Note that $q_t$ is implicitly defined by the sampling process where we push $x_1\sim \mathcal N(0, I)$ backwards through the ODE $\eqref{eq:fm-marginal-velocity}$ with $\nabla \log p_t(x_t) \mapsto f_\theta(x, t)$.
+:::
+Rewriting $\nabla \log p_t$ using $\mathbb E_p[x_0\mid x_t]$ via Tweedie, and $\nabla \log q_t$ using the implicit parameterization above, the de Bruijn equation $\eqref{eq:fm-debruijn}$ yields
+$$
 \begin{aligned}
-    v_t(x_t) \rho_t(x_t)
-    &= \int v_t(x_t\mid x_0) \rho(x_0\mid x_t) \rho_t(x_t)\, dx_0 \\
-    v_t &= \int v_t(x_t\mid x_0) \, d\rho(x_0\mid x_t)
-    \label{eq:vector-field-marginalization"}
+    D(p_0\| q_0)
+    &= \int_0^1 \dfrac{t}{1-t} \cdot \left(\dfrac {\bar t} {t^2}\right)^2 \mathbb E_{x_t \sim p_t}\|\mathbb E_{x_0\sim p(x_0\mid x_t)}[x_0\mid x_t] - f_\theta(x_t, t) \|^2\, dt \\
+    &= \mathbb E_{t\sim \mathrm{Unif}[0, 1]} \left[\dfrac {\bar t} {t^3} \mathbb E_{x_t} \| \mathbb E_{x_0}[x_0\mid x_t] - f_\theta(x_t, t) \|^2 \right]
 \end{aligned}
-\end{equation}
 $$
-Unpacking this with the interpretation that $\rho$ is a fluid and $v_t$ is fluid velocity:
-- The LHS is the total momentum density of the fluid at position $x_t$, time $t$.
-- The fluid momentum density is an integral over particle momentum densities. Of the $\rho_t(x_t)$ particles which are at $x_t$, $\rho(x_0\mid x_t)$ of them came from $x_0$ with velocity $v_t(x_t\mid x_0)$.
+Note that sampling are all from the data $p$-process. But mean estimation is very easy, applying MSE decomposition while fixing $x_t$:
+$$
+\begin{aligned}
+    \mathbb E_{x_0\sim p(\cdot \mid x_t)} \| f_\theta(x_t, t) - x_0 \|^2
+    &= \mathbb E_{x_0} \| f_\theta(x_t, t) - \mathbb E[x_0\mid x_t] - (x_0 - \mathbb E[x_0\mid x_t]) \|^2 \\
+    &= \mathbb E_{x_0} \| \mathbb E_{x_0}[x_0\mid x_t] - f_\theta(x_t, t) \|^2 + \mathrm{Var}[x_0 \mid x_t]
+\end{aligned}
+$$
+The cross term vanishes; this is the law of total variation.
 
-The conditional vector field $v_t(x_t\mid x_0)$ is fairly easy to compute, recalling $\rho_t(x_t\mid x_0)$ formula and $\eqref{eq:ot-velocity}$:
-$$
-\begin{equation}
-    v_t(x_t) = -\left(
-        \dfrac{1}{1-t} x_t + \dfrac{t}{1-t} \nabla \log \rho_t(x_t\mid x_0)
-    \right)
-\label{eq:fm-cdn-velocity}
-\end{equation}
-$$
-
-:::remark[interpretation]
-The fluid velocity at $x_t$, time $t$ is the conditional velocity $v_t(x_t \mid x_0)$ conditioning upon the particle initial conditions, weighted by what ratio of particles at $x_t$ came from each of $x_0$.
+:::remark
+This analysis shows that the irreducible noise at level $t$ is $\mathrm{Var}[x_0\mid x_t]$.
 :::
 
-:::remark[the whole flow matching story]
-1. We define an independent coupling and figure out the OT vector field associated with the coupling.
-2.
-:::
-
-<!-- :::remark[what optimal?]
-When people say that the flow matching vector field is straight, they mean that
-:::
-
-:::remark[what straight?]
-When people say that a vector field is "straight", they could mean that the conditional field which implements $\pi(x, y)$ transport is straight, or they could mean that the marginal vector field produces straight-line trajectories. In flow matching, the conditional vector fields are straight but coupling allows intersection, so the marginal is generally not straight.
-::: -->
+[^elsewhere]: It doesn't matter where $v_t$ is elsewhere because $\rho(x_t\mid x_0, x_1)$ does not have mass elsewhere.
