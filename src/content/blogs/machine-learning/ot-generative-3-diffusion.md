@@ -1,7 +1,7 @@
 ---
 title: "OT for generative modeling 3 — Diffusion as Maximum Likelihood Estimation"
 date: 2026-03-01
-summary: "We derive the interpretation of physical diffusion as Wasserstein gradient flow, noise-spectrum decomposition of KL-divergence, diffusion models as MLE, and unify ODE-based flow matching and SDE-based diffusion. Honorable mentions to Fokker-Planck, Anderson's theorems, de Bruijin identity, and Tweedie's formula."
+summary: "We derive the interpretation of physical diffusion as Wasserstein gradient flow, noise-spectrum decomposition of KL-divergence, diffusion models as MLE, and first-principles analysis of flow matching scalability. Honorable mentions to Fokker-Planck equation, Anderson's theorem, de Bruijin identity, and Tweedie's formula."
 ---
 
 This part uses the Wasserstein toolkit we've developed in parts 0 and 1 (links) to unpack the dominant generative paradigm from first principles.
@@ -11,10 +11,10 @@ We begin with some physics on Brownian motion and stochastic processes, highligh
   - As a corollary, we prove **Anderson's theorem** which allows one to run a SDE backwards in time.
 - Unifying microscopic particle movement with macroscopic, thermodynamic optimization: diffusion with drift (Fokker-Planck) as Wasserstein gradient descent.
 
-We conclude with a first principles, maximum likelihood interpretation of diffusion and flow matching models.
+We also deep-dive into the two absolutely foundational pillars of scalable diffusion / flow matching. In my opinion, they are the first-principles reason why flow matching dominate modern generative modeling:
 
-- The **dynamic de Bruijin** provides a canonical noise-spectral decomposition of KL-divergence.
-- **Tweedie's formula** provides one perspective on why Gaussian noise is canonical and unifies vector field estimation and score matching.
+- **Tweedie's formula** provides a dimension-scalable solution to the density estimation problem, the universal problem to all generative modeling. It turns density estimation -- which nonparametrically scales with dimension -- into function estimation, which scales with the amount and internal structure of the data.
+- The **dynamic de Bruijin identity** provides a canonical noise-spectral decomposition of KL-divergence. It bridges score matching (exactly what Tweedie's provide), with MSE; it also provides a canonical spectrum over which to commit bias-variance tradeoffs.
 
 Later todo for myself: look into diffusion as optimal Bayes engine (Polyanskiy).
 
@@ -31,8 +31,10 @@ Later todo for myself: look into diffusion as optimal Bayes engine (Polyanskiy).
   - [Application to various processes.](#application-to-various-processes)
     - [Heat process](#heat-process)
     - [Variance-preserving process](#variance-preserving-process)
-  - [Tweedie's formula and flow matching](#tweedies-formula-and-flow-matching)
-    - [The optimal transport ODE process](#the-optimal-transport-ode-process)
+- [Tweedie's formula and flow matching](#tweedies-formula-and-flow-matching)
+  - [Tweedie's formula](#tweedies-formula)
+  - [The flow matching process](#the-flow-matching-process)
+  - [Flow matching in practice](#flow-matching-in-practice)
 
 <!-- A clarifying point: diffusion is a heavily loaded word, it could mean any of the following:
 
@@ -397,11 +399,10 @@ $$
 
 The variance exploding process injects Gaussian noise without attenuating the original signal. It's simply the heat equation with variable diffusion constant.
 
-In this section, we consider three common process and the application of theorem $\eqref{eq:debruijn}$ to each:
+In this section, we consider two common process and the application of theorem $\eqref{eq:debruijn}$ to each:
 
 1. The <u>heat process</u> with noise schedule $g_t$. it's defined on $t\in [0, \infty)$ and the variance of the marginal explodes.
 2. The <u>variance preserving process</u>, defined on $t\in [0, \infty)$ and $p_\infty\to \mathcal N(0, I)$.
-3. The <u>compact process</u> (custom naming), defined on $t\in [0, 1]$ and $p_1\to \mathcal N(0, I)$. It's simply a rescaling of the variance-preserving process.
 
 #### Heat process
 
@@ -467,7 +468,11 @@ $$
 Here $\mu$ is long-term mean, $\theta$ is restorative strength, and $\sigma$ volatility.
 :::
 
-### Tweedie's formula and flow matching
+## Tweedie's formula and flow matching
+
+Here, we clarify some of the most heavily overloaded deconcepts in flow matching / diffusion, prove that flow matching is MLE by Tweedie's formula, and conclude with some possibly backfit first-principles analysis on why flow matching have come to dominate generative modeling. We'll see that Tweedie's formula is the engine behind high-dimensional scalability of flow matching models.
+
+### Tweedie's formula
 
 Tweedie's formula states that for processes with Gaussian noise, the true posterior mean (optimal denoiser) can be computed purely from **the score of the marginal distribution**.
 
@@ -515,26 +520,44 @@ Rearranging yields the result. $\square$
 This is a highly nontrivial theorem. In general, posterior quantities depend on the prior distribution of $z$. Here, the key property $\nabla_x p(x\mid z) = -p(x\mid z)\Sigma^{-1}(x-z)$ provided the closed-form $p(x\mid z)$ which can be rearranged into $p(z\mid x)$.
 :::
 
+:::remark[application, *IMPORTANT*!]
+Flipping the theorem on its head, Tweedie reduces a **density estimation** problem $\nabla \log \rho$ into a **mean-estimation** problem $\mathbb E[z\mid x]$. Suppose $z$ is an arbitrary distribution, we can apply $\sigma$ amount of noise and solve the mean-estimation problem to approximate $\log \rho_z \approx \log \rho_x$; here $\sigma$ controls the bias-variance tradeoff.
+:::
+
 Next, let's consider compact $t\in [0, 1]$ with $t=0$ being data / model boundary distribution, and $t=1$ being $\mathcal N(0, I)$. Recall in [Part 1](/blogs/machine-learning/ot-generative-1-wasserstein-geometry/#unifying-static-and-dynamical-perspectives) that the Wasserstein-2 geodesic distance is realized by straight-line transport. Solving this ODE corresponds to flow matching, and we derive the de Bruijin MLE interpretation below:
 
-#### The optimal transport ODE process
+### The flow matching process
 
-:::definition[the optimal transport ODE process]
-Recalling our discussion of the optimal transport field from [Part 1](/blogs/machine-learning/ot-generative-1-wasserstein-geometry/#from-particles-to-fluid), the optimal transport macroscopic flow field is
+Recall two critical results from Part 1:
+
+1. Given a transport plan (coupling $\pi(x, y)$), the optimal-transport flow which realizes the plan realizes straight-line transport.
+2. The Wasserstein-2 distance is realized by the optimal transport plan. By Banamou-Brenier, the straight-line transports which realize the optimal transport plan never intersect.
+
+:::definition[the flow matching ODE process]
+Fixing data (or model) distribution $p_0$ and stationary noise distribution $p_1=\mathcal N(0, I)$, flow matching uses **independent coupling** between noise and data:
+$$
+    \pi(x_0, x_1) = p_0(x_0) p_1(x_1)
+$$
+Recalling our discussion of the optimal transport field from [Part 1](/blogs/machine-learning/ot-generative-1-wasserstein-geometry/#from-particles-to-fluid), the OT process **for the conditional coupling** is just straight line transport. The marginal vector field is
 $$
     dX_t = v_t(X_t)\, dt, \quad v_t(x) = \mathbb E[X_1 - X_0 \mid X_t = x]
 $$
-The conditional distribution family is standard-deviation preserving, not variance preserving
+The OT process **for this coupling** (note the scope!) has the following form:
+The conditional distribution family is
 $$
-    \rho(x_t\mid x_0) = \mathcal N\left(x_t; (1-t) x_0, t^2I\right)
+    \rho_t(x_t\mid x_0) = \mathcal N\left(x_t; (1-t) x_0, t^2I\right)
 $$
-We're free to introduce Brownian motion according to any schedule $g_t$:
+Applying the continuity equation and looking for a gradient field yields the conditional vector field: IMPORTANT: TODO
 $$
-    dX_t = \left[v_t(X_t) + \dfrac{g_t^2}{2} \nabla \log \rho_t(X_t)\right] + g_t\, dW_t
+\begin{equation}
+    v_t(x_t\mid x_0) = \nabla \log \rho\implies \nabla \cdot v_t(x_t\mid x_0) + \pd t \rho_t(x_t\mid x_0) = 0
+    \label{eq:cdn-fm-velocity}
+\end{equation}
 $$
-The dynamic de Bruijin identity applies either way, with $D(p_1 \| q_1) = 0$:
+The dynamic de Bruijin identity applies with $D(p_1 \| q_1) = 0$:
+
 $$
-    \dfrac{d}{dt} D(p_t \| q_t) = \int_0^1 \mathbb E_{p_t} \la \nabla \log p_t - \nabla \log q_t, v^p_t - v^q_t\ra \, dt
+    D(p_0 \| q_0) = \int_0^1 \mathbb E_{p_t} \la \nabla \log p_t - \nabla \log q_t, v^p_t - v^q_t\ra \, dt
 $$
 :::
 
@@ -558,24 +581,82 @@ $$
 $$
 Substituting $\hat x_0$ yields the macroscopic field
 
+<span id="prop-ot-closed-form"></span>
+
 :::proposition[optimal transport closed-form formulas]
 Given the optimal transport process with conditional distribution
 $$
     \rho(x_t\mid x_0) = \mathcal N\left(x_t; (1-t) x_0, t^2I\right)
 $$
 The straight-line transport ODE is driven by the field
+
+<span id="eq-ot-velocity"></span>
+
 $$
+\begin{equation}
     v_t(x_t) = -\left(
         \dfrac{1}{1-t} x_t + \dfrac{t}{1-t} \nabla \log \rho_t(x_t)
     \right)
+\label{eq:ot-velocity}
+\end{equation}
 $$
 The drift terms cancel in $v^p_t - v^q_t$ and $D(p_1 \| q_1)=0$, yielding the KL decomposition
+<span id="eq-fm-debruijn"></span>
 $$
+\begin{equation}
     D(p_0 \| q_0)
     = \int_0^1 \dfrac{t}{1-t} \mathbb E_{p_t} \|\nabla \log p_t - \nabla \log q_t\|^2\, dt
+    \label{eq:fm-debruijn}
+\end{equation}
 $$
 :::
 
-:::remark
-This proves that flow matching is MLE.
+### Flow matching in practice
+
+Let's look at the [preceding proposition](#prop-ot-closed-form) operationally:
+
+1. Straight-line ODE transport equation $\eqref{eq:ot-velocity}$ tells us that given the (noise) spectrum-indexed family of scores $\nabla \log \rho_t$, we can integrate $v_t(x_t)$ from $x_1$ to $x_0$ to generate a sample.
+2. de Bruijn formula $\eqref{eq:fm-debruijn}$ tells us that minimizing score MSE yields maximum likelihood.
+
+If we're happy generating samples by integrating a vector field, we only need to approximate the score $\nabla \log p_t(x)$ by $f_\theta(x, t)$. This is a parameric density estimation problem. But the target looks intractable. Let's first decompose the marginal vector field into conditional ones:
+<span id="eq-vector-field-marginalization">
+$$
+\begin{equation}
+\begin{aligned}
+    v_t(x_t) \rho_t(x_t)
+    &= \int v_t(x_t\mid x_0) \rho(x_0\mid x_t) \rho_t(x_t)\, dx_0 \\
+    v_t &= \int v_t(x_t\mid x_0) \, d\rho(x_0\mid x_t)
+    \label{eq:vector-field-marginalization"}
+\end{aligned}
+\end{equation}
+$$
+Unpacking this with the interpretation that $\rho$ is a fluid and $v_t$ is fluid velocity:
+- The LHS is the total momentum density of the fluid at position $x_t$, time $t$.
+- The fluid momentum density is an integral over particle momentum densities. Of the $\rho_t(x_t)$ particles which are at $x_t$, $\rho(x_0\mid x_t)$ of them came from $x_0$ with velocity $v_t(x_t\mid x_0)$.
+
+The conditional vector field $v_t(x_t\mid x_0)$ is fairly easy to compute, recalling $\rho_t(x_t\mid x_0)$ formula and $\eqref{eq:ot-velocity}$:
+$$
+\begin{equation}
+    v_t(x_t) = -\left(
+        \dfrac{1}{1-t} x_t + \dfrac{t}{1-t} \nabla \log \rho_t(x_t\mid x_0)
+    \right)
+\label{eq:fm-cdn-velocity}
+\end{equation}
+$$
+
+:::remark[interpretation]
+The fluid velocity at $x_t$, time $t$ is the conditional velocity $v_t(x_t \mid x_0)$ conditioning upon the particle initial conditions, weighted by what ratio of particles at $x_t$ came from each of $x_0$.
 :::
+
+:::remark[the whole flow matching story]
+1. We define an independent coupling and figure out the OT vector field associated with the coupling.
+2.
+:::
+
+<!-- :::remark[what optimal?]
+When people say that the flow matching vector field is straight, they mean that
+:::
+
+:::remark[what straight?]
+When people say that a vector field is "straight", they could mean that the conditional field which implements $\pi(x, y)$ transport is straight, or they could mean that the marginal vector field produces straight-line trajectories. In flow matching, the conditional vector fields are straight but coupling allows intersection, so the marginal is generally not straight.
+::: -->
