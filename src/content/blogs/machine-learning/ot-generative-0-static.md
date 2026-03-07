@@ -1,10 +1,10 @@
 ---
 title: "OT for generative modeling 0 — the static perspective"
 date: 2026-02-23
-summary: "Why we care about optimal transport (OT), and introduction to the static viewpoint. Variational characterization, and WGAN."
+summary: "Why we care about optimal transport (OT), the static (Kantorovich) definition of Wasserstein definition, the linear programming (Kantorovich-Rubinstein) dual formulation, and WGAN."
 ---
 
-At the heart of modern generative modeling, there is a fundamental tension between two spaces. On **sample space** $\R^d$, Euclidean geometry gives us clean, benign objectives such as $L^2$ mean squared error. On the **space of distributions** $\mathcal P(\R^d)$ maximum likelihood singles out the Kullback-Leibler divergence as the principled objective, and $\mathcal P(\R^d)$ has its own geometry. However, KL is agnostic towards the internal geometry of $\R^d$ and, consequently, the inductive biases associated with it; $D(P\|Q)$ also blows up when $P$'s support is outside of $Q$.
+There are two spaces of mathematical objects at the heart of generative modeling. On the **sample space** $\R^d$, Euclidean geometry gives us clean, benign objectives such as $L^2$ mean squared error. On the **space of distributions** $\mathcal P(\R^d)$ maximum likelihood singles out the Kullback-Leibler divergence as the principled objective, and $\mathcal P(\R^d)$ has its own geometry. However, KL is agnostic towards the internal geometry of $\R^d$ and, consequently, the inductive biases associated with it; $D(P\|Q)$ also blows up when $P$'s support is outside of $Q$.
 
 **Optimal transport** provides one of the most mathematically beautiful bridges between the two spaces. It has also become the backbone of modern generative modeling. My personal acquaintance with the field began with [Wasserstein GAN](https://arxiv.org/pdf/1701.07875). In school, [information theory](https://nlyu1.github.io/classical-info-theory/) provided the necessary tools, and I've always been intrigued by the connections between e.g. flow matching, wasserstein gradient flow, and even [renormalization](https://arxiv.org/abs/2202.11737). Motivated by understanding a highly impressive recent work on [drifting models](https://arxiv.org/abs/2602.04770), I decided to write these posts to learn, and unpack, some of the concepts.
 
@@ -21,8 +21,8 @@ Layout of the posts:
 
 ## Contents
 
-- [Wasserstein distance](#wasserstein-distance): how to define optimal transport?
-- [Variational characterization and W-GAN](#variational-characterization-and-w-gan): Wasserstein distance as a minimax game
+- [Wasserstein distance](#wasserstein-distance)
+- [Variational characterization and W-GAN](#variational-characterization-and-w-gan)
 
 ## Wasserstein distance
 
