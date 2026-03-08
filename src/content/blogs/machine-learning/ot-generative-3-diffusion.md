@@ -482,6 +482,7 @@ Application of this formula sheds light on the fundamental unification of ODE-st
 2. Predicting the posterior mean (denoising)
 3. Predicting the denoising vector field.
 
+<span id="thm-tweedie"></span>
 :::theorem[Tweedie's formula]
 Let $z\sim P_z$ be an unobserved true signal with an arbitrary prior, then
 $$
