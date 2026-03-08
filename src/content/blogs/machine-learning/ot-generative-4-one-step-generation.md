@@ -67,7 +67,7 @@ $$
     \hat \epsilon^\pm_t(y^\pm_t)
     = \dfrac 1 t\left[y^\pm_t - \bar t\, f_\varphi^{\pm, t}(g_\theta(y^\pm_t))\right]
 $$
-Expanding out the sampling explicitly:
+Expanding the sampling explicitly:
 $$
 \begin{aligned}
     \mathcal L_s^+ &=
@@ -82,15 +82,24 @@ $$
         y_t^- := \bar t f_\varphi(g_\theta(z)) + t\epsilon
 \end{aligned}
 $$
-3. **Decoder score matching loss**: these are minimized w.r.t. $\theta$. They drift the generator in the direction which minimizes KL along the noise spectrum:
+3. **Decoder score matching loss**: these are minimized w.r.t. $\theta$. They drift the generator in the direction which minimizes KL via score mismatch along the noise spectrum
 $$
 \begin{aligned}
     \mathcal L_m
-    &= \mathbb E_{x\sim \rho^+, \, t\sim U} \left[\dfrac {\bar t}{t^3} \| \overline{f^{+, t}_\varphi(g_\theta(y_t^+))} - f^{-, t}_\varphi(\overline{g_\theta}(y_t^+))\|^2\right] \\
-    y_t^+ &= \bar t f_\varphi(g_\theta(f_\varphi(x))) + t\epsilon
+    &= \mathbb E_{y^+\sim \sigma^+, \, t\sim U} \left[
+        \dfrac{\bar t}{t^3} \|
+            \tilde y^+ + \mathrm{stopgrad}\left[V_t(\tilde y^+) - \tilde y^+\right]
+        \|^2
+    \right] \\
+    \tilde y^+
+    &= f_\phi(g_\theta(y^+)) \\
+    V_t(\tilde y^+)
+    &= - \nabla_{\tilde y^+} \| f^{+, t}_\varphi(g_\theta(y_t^+)) - f^{-, t}_\varphi(g_\theta(y_t^+))\|^2 \\
+    y_t^+
+    &= \bar t y^+ + t\epsilon
 \end{aligned}
 $$
-Please note that the only dependence on $\theta$ is introduced in the comptuation of $y_t^+$. We rely on $g_\theta \circ f_\varphi = \mathrm{Id}$ to resample $x$ using $\theta$, then push it through the roundtrip again (with frozen gradients) to do score matching. We use overlines to denote gradient-free applications or quantities. Note that the $f_\varphi^+$ term has full $\theta$-stopgrad because it's a frozen evaluation of the latent data score.
+This implements a drifting objective: $V_t(\tilde y^+)$ provides a curl-free gradient field which pushes generated latent samples $\tilde y^+$ in the direction which minimizes latent score mismatch as measured by the round-trip score estimator $f_\varphi^{+, t} \circ g_\theta$. The stopgrad loss pushes the generator's samples in that direction. In practice, we should replacing the $\bar t/t^3$ weighting with equivalent uniform weighting of velocity matching, as implemented by flow matching models, which corresponds to cancelling the $t/\bar t$ factor$, yielding a $1/t^2$ weighting.
 
 ### Theoretical analysis
 
