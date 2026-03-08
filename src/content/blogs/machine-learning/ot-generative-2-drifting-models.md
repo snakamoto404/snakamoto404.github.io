@@ -198,6 +198,7 @@ $$
 Gradient descent velocity: $v = \nabla_x(P/Q_\theta)$.
 :::
 
+<span id="ex-otto-reverse-kl"></span>
 :::example[applying Otto's theorem to reverse KL]
 
 Apply to $Q_\theta$ in $\mrm{KL}(Q_\theta\|P)$. The functional derivative is
