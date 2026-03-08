@@ -86,11 +86,11 @@ $$
 $$
 \begin{aligned}
     \mathcal L_m
-    &= \mathbb E_{x\sim \rho^+, \, t\sim U} \left[\dfrac {\bar t}{t^3} \| f^{+, t}_\varphi(\overline{g_\theta}(y_t^+)) - f^{-, t}_\varphi(\overline{g_\theta}(y_t^+))\|^2\right] \\
+    &= \mathbb E_{x\sim \rho^+, \, t\sim U} \left[\dfrac {\bar t}{t^3} \| \overline{f^{+, t}_\varphi(g_\theta(y_t^+))} - f^{-, t}_\varphi(\overline{g_\theta}(y_t^+))\|^2\right] \\
     y_t^+ &= \bar t f_\varphi(g_\theta(f_\varphi(x))) + t\epsilon
 \end{aligned}
 $$
-Please note that the only dependence on $\theta$ is introduced in the comptuation of $y_t^+$. We rely on $g_\theta \circ f_\varphi = \mathrm{Id}$ to resample $x$ using $\theta$, then push it through the roundtrip again (with frozen gradients) to do score matching. We use $\overline{g_\theta}$ to denote gradient-free application of the network.
+Please note that the only dependence on $\theta$ is introduced in the comptuation of $y_t^+$. We rely on $g_\theta \circ f_\varphi = \mathrm{Id}$ to resample $x$ using $\theta$, then push it through the roundtrip again (with frozen gradients) to do score matching. We use overlines to denote gradient-free applications or quantities. Note that the $f_\varphi^+$ term has full $\theta$-stopgrad because it's a frozen evaluation of the latent data score.
 
 ### Theoretical analysis
 
@@ -122,7 +122,9 @@ The RHS three terms correspond to three loss pieces:
 - $\|\widehat{y_*^+} - \widehat{y_*^-}\|^2$ corresponds to $\mathcal L_m$ approximately up to how well $f_\varphi \circ g_\theta \approx \mathrm{Id}$ over $\sigma^+$, which is enforced by the decoder injectivity loss $\mathcal L_d$.
 
 #### DPI residual
-If $f_\varphi$ is an injection, then $D(\rho^+ \| \rho^-) = D(\sigma^+ \| \sigma^-)$. The DPI residual simplifies to the encoder reconstruction loss $\mathcal L_e$ under a Gaussian noise model. This explains why we're only enforcing the encoder injectivity over $\rho^+$ in $\mathcal L_e$. To compute divergence, we need to specify a noise model about the deterministic decoder output:
+If $f_\varphi$ is a true injection, then $D(\rho^+ \| \rho^-) = D(\sigma^+ \| \sigma^-)$. In practice, we optimize the DPI residual by assuming a Gaussian noise model and reducing it to encoder reconstruction loss $\mathcal L_e$, which explains why we're only enforcing the encoder injectivity over $\rho^+$ in $\mathcal L_e$. We provide an intuition-first analysis below.
+
+To compute divergence, assume a noise model about the deterministic decoder output:
 $$
     \rho^-(x\mid y) = \mathcal N(x;\, g_\theta(y), \beta I)
 $$
