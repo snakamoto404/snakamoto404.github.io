@@ -82,24 +82,18 @@ $$
         y_t^- := \bar t f_\varphi(g_\theta(z)) + t\epsilon
 \end{aligned}
 $$
-3. **Decoder score matching loss**: these are minimized w.r.t. $\theta$. They drift the generator in the direction which minimizes KL via score mismatch along the noise spectrum
+3. **Decoder score matching loss**: these are minimized w.r.t. $\theta$. Drift the decoder in the direction which minimizes KL via score mismatch. Writing $\tilde y^+ = f_\phi(g_\theta(y^+))$:
 $$
 \begin{aligned}
     \mathcal L_m
-    &= \mathbb E_{y^+\sim \sigma^+, \, t\sim U} \left[
-        \dfrac{\bar t}{t^3} \|
-            \tilde y^+ + \mathrm{stopgrad}\left[V_t(\tilde y^+) - \tilde y^+\right]
-        \|^2
-    \right] \\
-    \tilde y^+
-    &= f_\phi(g_\theta(y^+)) \\
-    V_t(\tilde y^+)
-    &= - \nabla_{\tilde y^+} \| f^{+, t}_\varphi(g_\theta(y_t^+)) - f^{-, t}_\varphi(g_\theta(y_t^+))\|^2 \\
-    y_t^+
-    &= \bar t y^+ + t\epsilon
+    &= \mathbb E_{y^+\sim \sigma^+, \, t\sim U} \|
+            \tilde y^+ - \mathrm{stopgrad}\left[\tilde y^+ + V_t(\tilde y^+, \epsilon)\right]
+        \|^2 \\
+    V_t(y, \epsilon)
+    &= - \eta_t \nabla_{\tilde y^+} \| f^{+, t}_\varphi(g_\theta(\bar t y + t\epsilon)) - f^{-, t}_\varphi(g_\theta(\bar t y + t\epsilon))\|^2 \\
 \end{aligned}
 $$
-This implements a drifting objective: $V_t(\tilde y^+)$ provides a curl-free gradient field which pushes generated latent samples $\tilde y^+$ in the direction which minimizes latent score mismatch as measured by the round-trip score estimator $f_\varphi^{+, t} \circ g_\theta$. The stopgrad loss pushes the generator's samples in that direction. In practice, we should replacing the $\bar t/t^3$ weighting with equivalent uniform weighting of velocity matching, as implemented by flow matching models, which corresponds to cancelling the $t/\bar t$ factor$, yielding a $1/t^2$ weighting.
+This implements a drifting objective: $V_t(\tilde y^+)$ provides a curl-free gradient field pushing generated latent samples $\tilde y^+$ in the direction which minimizes latent score mismatch, where latent score mismatch is measured by the round-trip score estimator $f_\varphi^{+, t} \circ g_\theta$. The stopgrad loss pushes the generator's samples in that direction. Use $\eta_t = \bar t/t^3$ for exact de-Bruijn MLE weighting, but in practice we should consider an equivalent uniform weighting of velocity matching, as implemented by flow matching models, which corresponds to $1/t^2$ weighting.
 
 ### Theoretical analysis
 
