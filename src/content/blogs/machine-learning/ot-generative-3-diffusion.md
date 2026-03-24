@@ -543,7 +543,7 @@ We analyze the flow matching process by applying the following construction:
 2. Given the independent coupling, we <span class="question">define</span> straight-line transport <span class="question">conditioned upon endpoints</span>. This supplies the trivial endpoints-conditioned vector field.
 3. Using 1-2 above, we can derive the <span class="question">data-conditioned</span> vector field $v_t(x_t\mid x_0)$. This is a straight vector field.
 4. Using 3, we derive the marginal vector field $v_t(x_t)$. This <span class="question">is not a straight vector field</span>.
-5. Note that the <span class="question">noise-conditioned vector field</span> $v_t(x_t\mid x_1)$ is also not straight.
+5. Note that the <span class="question">noise-conditioned vector field</span> $v_t(x_t\mid x_1)$ is straight.
 
 It's extremely important to differentiate between vector fields by what they're conditioned on.
 
@@ -700,7 +700,7 @@ Let's look at the [preceding proposition](#prp-fm) operationally:
 
 If we're happy generating samples by integrating a vector field, we only need to approximate the score $\nabla \log p_t(x)$. This is a parameric density estimation problem. But the score target $\nabla \log p_t$ looks untractable.
 
-Our escape hatch is equation $\eqref{eq:fm-marginal-tweedie}$. Reparameterize $f_\theta(x, t) \approx \mathbb E_p[x_0\mid x_t]$, then the score of our generative model is
+Our escape hatch is equation $\eqref{eq:fm-marginal-tweedie}$. Reparameterize $f_\theta(x, t) \approx \mathbb E_p[x_0\mid x_t]$, then the implied score of our generative model is
 $$
     \nabla \log q_t(x_t) = \dfrac 1 {t^2} \left[\bar t f_\theta(x_t) - x_t\right]
 $$
@@ -723,7 +723,7 @@ $$
     &= \mathbb E_{x_0} \| \mathbb E_{x_0}[x_0\mid x_t] - f_\theta(x_t, t) \|^2 + \mathrm{Var}[x_0 \mid x_t]
 \end{aligned}
 $$
-The cross term vanishes; this is the law of total variation.
+The cross term vanishes; this is the law of total variance.
 
 :::remark
 This analysis shows that the irreducible noise at level $t$ is $\mathrm{Var}[x_0\mid x_t]$.
