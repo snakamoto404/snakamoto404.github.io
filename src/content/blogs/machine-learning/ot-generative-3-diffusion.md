@@ -635,6 +635,62 @@ Note that if $x_0\sim p$ are e.g. images, then $x_0$ are generally sharp images,
 Note that the **data-conditioned** vector field $v_t(x_t\mid x_0)$ is straight. Similarly, the **noise-conditioned vector field** $v_t(x_t\mid x_1) = (x_1 - x_t) / \bar t$ is also straight. However, the marginal vector field $v_t(x_t)$ is not straight.
 :::
 
+What happens when we depart from the KL-weighting? Below, we show that using non-$t/\bar t$ score weights produces a bulk-KL over intermediate marginals:
+:::proposition[non-MLE weightings produce bulk-KL]
+Consider $p_t, q_t$ evolving according to the independent-coupling process. Given weights $a(t)$, define
+$$
+    S_t := \mathbb E_{x\sim p_t}\| \nabla \log p_t(x) - \nabla \log q_t(x) \|^2, \quad w(t) := \dfrac{\bar t}{t} a(t)
+$$
+The $a(t)$-weighted score-difference integral can be written as
+$$
+\begin{equation}
+    \int_0^1 a(t) S_t\, dt
+    =
+    - w(t) D(p_t \| q_t)\bigg|_0^1
+    +
+    \int_0^1 \dot w(t) D(p_t \| q_t)\, dt
+\label{eq:weighted-bulk-kl}
+\end{equation}
+$$
+whenever the boundary term is well-defined. In particular, whenever the boundary term vanishes, score matching with weight $a(t)$ is equivalent to minimizing the bulk-KL
+$$
+    \int_0^1 \dot w(t)\, D(p_t \| q_t)\, dt
+$$
+The maximum-likelihood choice $a(t)=t/(1-t)$ is exceptional: then $w(t)\equiv 1$, so the integral collapses to the endpoint term $D(p_0 \| q_0)$.
+:::
+
+<details>
+<summary>Proof</summary>
+
+From $\eqref{eq:fm-debruijn}$, differentiate both sides w.r.t. $t$ and rearrange:
+$$
+    D(p_t \| q_t) = \int_t^1 \dfrac{\tau}{1-\tau} S_\tau\, d\tau \implies S_t = -\dfrac{\bar t}{t} \dfrac{d}{dt} D(p_t \| q_t)
+$$
+Substitute into the weighted score objective and use $w(t)=\dfrac{\bar t}{t} a(t)$:
+$$
+\begin{aligned}
+    \int_0^1 a(t) S_t\, dt
+    &=
+    -\int_0^1 w(t)\, \dfrac{d}{dt} D(p_t \| q_t)\, dt
+\end{aligned}
+$$
+Integrate by parts to obtain $\eqref{eq:weighted-bulk-kl}$.
+$\square$
+</details>
+
+:::corollary[flow-matching / uniform-velocity weighting]
+A very common choice is uniform-in-time velocity matching, corresponding to
+$$
+    a(t) = \dfrac{t^2}{(1-t)^2} \implies w(t) = \dfrac{\bar t}{t} a(t) \implies \dfrac{t}{1-t}, \qquad \dot w(t) = \dfrac{1}{(1-t)^2}
+$$
+The equivalent bulk-KL weighting is
+$$
+    \int_0^1 \mathbb E_{x\sim p_t}\| v_t - \hat v_t \|^2\, dt
+    = \int_0^1 a(t) \| \nabla p_t(x_t) - \widehat{ \nabla p_t(x_t)} \|^2\, dt
+    = \int_0^1 \dfrac{D(p_t \| q_t)}{(1-t)^2}\, dt
+$$
+:::
+
 ### Flow matching in practice
 
 Let's look at the [preceding proposition](#prp-fm) operationally:
@@ -672,5 +728,59 @@ The cross term vanishes; this is the law of total variation.
 :::remark
 This analysis shows that the irreducible noise at level $t$ is $\mathrm{Var}[x_0\mid x_t]$.
 :::
+
+In practice practice, the literature has settled upon using function estimators to approximate the **velocity field** $f_\theta(x_t, t) \approx v_t(x_t)$.
+Systematically, the three parameterizations are related by the identities
+$$
+\begin{alignedat}{2}
+\nabla \log p_t(x_t)
+&= \frac{\bar t\,\mathbb E[x_0\mid x_t] - x_t}{t^2}
+&\qquad&= -\frac{\bar t}{t}v_t(x_t) - \frac{x_t}{t} \\
+
+v_t(x_t)
+&= \frac{1}{t}\bigl(x_t - \mathbb E[x_0\mid x_t]\bigr)
+&\qquad&= -\frac{1}{1-t}\bigl(x_t + t\,\nabla \log p_t(x_t)\bigr) \\
+
+\mathbb E[x_0\mid x_t]
+&= x_t - t\,v_t(x_t)
+&\qquad&= \frac{x_t + t^2 \nabla \log p_t(x_t)}{1-t}
+\end{alignedat}
+$$
+Crucially, both the score and velocity are linear in the denoiser $\mathbb E[x_0\mid x_t]$, so the training protocol boils down to:
+$$
+    x_0\sim p_0, \qquad \epsilon\sim \mathcal N(0, I), \qquad t\sim \mathrm{Unif}(0, 1) \implies x_t = \bar t x_0 + t\epsilon
+$$
+and regress one of the equivalent targets:
+
+1. **Predict score.** Using Tweedie, the conditional score target is
+   $$
+       \nabla \log p_t(x_t\mid x_0)
+       = \dfrac{\bar t x_0 - x_t}{t^2}
+       = -\dfrac{\epsilon}{t}
+   $$
+   with objective
+   $$
+       \mathcal L_s(\theta)
+       = \mathbb E \left[\dfrac{t}{1 - t}\left\|\hat s_\theta(x_t, t) + \dfrac{\epsilon}{t}\right\|^2\right]
+   $$
+2. **Predict velocity.** Using $\hat x_{0,\theta} = x_t - t\hat v_\theta$, the conditional straight-line velocity is $\epsilon - x_0$
+   with objective
+   $$
+       \mathcal L_v(\theta)
+       = \mathbb E\left[\dfrac{\bar t}{t}\left\|\hat v_\theta(x_t, t) - (\epsilon - x_0)\right\|^2\right]
+   $$
+   This is the most popular parameterization. With $\hat v_\theta$ absorbing the $x_0$ term, this becomes a normalized-noise predictor.
+3. **Predict $x_0$ / denoise.** Train $\hat x_{0,\theta}(x_t, t)$ against $x_0$ with the MLE weight
+   $$
+       \mathcal L_{x_0}(\theta)
+       = \mathbb E\left[\dfrac{\bar t}{t^3}\left\|\hat x_{0,\theta}(x_t, t) - x_0\right\|^2\right]
+   $$
+
+These are the same objective written in different coordinates; only the deterministic $t$-dependent scaling changes.
+The irreducible component of the estimation problem at each noise level under MLE weighting is
+$$
+    \dfrac{\bar t}{t^3} \mathrm{Var}[x_0 \mid x_t]
+$$
+Note that this is intrinsic to the data distribution.
 
 [^elsewhere]: It doesn't matter where $v_t$ is elsewhere because $\rho(x_t\mid x_0, x_1)$ does not have mass elsewhere.
