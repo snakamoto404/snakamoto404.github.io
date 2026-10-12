@@ -3,9 +3,9 @@ title: "Scaling invariants: width-μP"
 date: 2026-10-11
 ---
 
-Here, we go through [... paper cite] on the intuition behind $\mu P$.
+Consider a linear layer $W:\mathbb R^n\to \mathbb R^p$ with input $x$ and output $z$. As we continuously scale up $n\mapsto kn$ and potentially $p\mapsto kp$, we want the layer to have **desirable scaling properties / symmetries** with respect to width.
 
-Consider a linear layer $W:\mathbb R^n\to \mathbb R^p$ with input $x$ and output $z$. As we continuously scale up $n\mapsto kn$ and potentially $p\mapsto kp$, we want the layer to have desirable scaling properties / symmetries with respect to depth.
+Read [Everett et al.](https://arxiv.org/abs/2407.05872) and [assignment 2 + optimization-1 lecture of CS312](https://deep-learning-alchemy.github.io/) for details.
 
 :::proposition[abc parameterization]{#abc-parameterization}
 Define the **forward multiplier**, **initialization scale**, and **learning-rate** degrees of freedom.
@@ -24,7 +24,7 @@ For the final readout layer, we only require $\|z_0\|=O(1)$.
 
 2. **Feature learning** (aka maximality) imposes the stronger constraint that, **for each layer**
 $$
-    \|z_t - z_0\|_{\mathrm{rms}} = n^{-a} \|(W_t - W_0)x\|_{\mathrm{rms}} = \Theta(1)
+    \|z_t - z_0\|_{\mathrm{rms}} = n^{-a} \|\Delta Wx + W\Delta x + \Delta W \Delta x\|_{\mathrm{rms}} = \Theta(1)
 $$
 :::
 
@@ -51,7 +51,7 @@ $$
 $$
 Replace with $a+b\geq1/2$ for $\|z\|_{\mathrm{rms}} = O(1)$.
 :::
-The Kaiming initialization [cite] chooses $a=0, b=1/2$ and $\sigma^2=2$ to compensate for ReLU.
+The [Kaiming initialization](https://arxiv.org/abs/1502.01852) chooses $a=0, b=1/2$ and $\sigma^2=2$ to compensate for ReLU.
 
 |                         | Input layer           | Hidden layers          | Readout layer          |
 | ----------------------- | --------------------- | ---------------------- | ---------------------- |
@@ -122,7 +122,7 @@ $$
 $$
 Expand the alignment exponent in $L_2$ norms:
 $$
-    \alpha(A, v) = \log_n \dfrac{\|Av\|_{\mathrm{rms}}}{\|A\|_{\mathrm{rms}}\|v\|_{\mathrm{rms}}} = 1 + \log_n r, \quad g := \dfrac{\|Av\|}{\|A\|\|v\|}
+    \alpha(A, v) = \log_n \dfrac{\|Av\|_{\mathrm{rms}}}{\|A\|_{\mathrm{rms}}\|v\|_{\mathrm{rms}}} = 1 + \log_n g, \quad g := \dfrac{\|Av\|}{\|A\|\|v\|}
 $$
 Interpreting, $g$ denotes what portion of $A$'s $L_2$ weight can a unit vector capture.
 :::
@@ -141,7 +141,7 @@ Consider special cases. Tl; dr is that under regular assumptions, the only impor
 
 :::remark[examples]
 1. When $A$ is constant-rank, $\alpha \to 1$ as long as $\Theta(1)$ of $v$ is in $A$'s row-space.
-2. When $A$ is full-rank, $\alpha \to 1/2$ regardless.
+2. When $A$ is full effective rank, $\alpha \to 1/2$ regardless.
 - $A = |u_1\rangle \langle v_1|$ **single-rank**.
     - $v=|v_1\rangle$ *in-rank* $\implies \alpha=1$.
     - $v$ is *full-spectrum deconcentrated* $\langle v_1|v\rangle = 1/\sqrt n \implies \alpha = 1/2$
@@ -149,15 +149,15 @@ Consider special cases. Tl; dr is that under regular assumptions, the only impor
 - $A = |u_{j=1\dots q}\rangle \langle v_j|$ **constant-rank $q$ flat-spectrum**.
     - $v = \tfrac{1}{\sqrt q} |v_{j=1\dots q} \rangle$ *in-rank deconcentrated* implies $g = 1/\sqrt q \implies \alpha \to 1$ in increasing $n$.
     - $v = |v_1\rangle$ *concentrated in-rank* implies $g=1/\sqrt q \implies \alpha\to 1$.
-    - $v = \tfrac{1}{\sqrt n} |v_{j=1\dots n}\rangle$ *full-space deconcentrated*. $g = \sqrt{q/n} \implies \alpha \to 1/2$.
+    - $v = \tfrac{1}{\sqrt n} |v_{j=1\dots n}\rangle$ *full-space deconcentrated*. $g = 1 / \sqrt n \implies \alpha \to 1/2$.
 - $A = |u_j\rangle \langle v_j|$ **full-rank flat-spectrum**. Special case of the above
-    - Both deconcetrated and concentrated $g=1/\sqrt n\implies \alpha = 1/2$.
+    - Both deconcentrated and concentrated $g=1/\sqrt n\implies \alpha = 1/2$.
 :::
 </details>
 
 ### Deriving width-μP
 
-We have all the ingredients to derive μP. Let's begin with a gauge observation
+We have all the ingredients to derive $\mu P$. Let's begin with a gauge observation
 
 :::proposition[abc-gauge]
 For Adam and Muon, $(a, b, c)\sim (a-\theta, b+\theta, c+\theta)$.
@@ -189,7 +189,7 @@ $$
 <details>
 <summary>Elaborating on the readout constraint</summary>
 
-Initialization at init gives $a_3 + b_3 \geq 1/2$. However, we also want
+Stability at init gives $a_3 + b_3 \geq 1/2$. However, we also want
 
 $$
     \|W_3 \Delta x\| = O(n^{\omega_3 - a_3 - b_3}) = \Theta(1)
@@ -200,7 +200,7 @@ Note that $\Delta x$ was computed from $W_3$, and $W_3$ is crucially constant-ra
 We impose equality to ensure that feature-change-passthrough is a nontrivial component of logit change.
 </details>
 
-2. **Embedding maximality** ($1$ constraint): for the embedding, $\Delta x = 0$ and crucially note that the fan-in is not a function of width (the alignment-exponent $\alpha_1 = 0$), then
+2. **Embedding maximality** ($1$ constraint): for the embedding, $\Delta x = 0$ and crucially note that the fan-in is not a function of width (the alignment-exponent $\alpha_1 = 0$), then $a_1 + c_1 = \gamma$ from
 $$
 \|\Delta z_1\|_{\mathrm{rms}} = n^{-a_1} \|\Delta W_1 x\|_{\mathrm{rms}} \propto n^{-a_1} \|\Delta W_1\|_{\mathrm{rms}} \|x\|_{\mathrm{rms}} = n^{-a_1 - c_1 - \gamma}
 $$
@@ -218,9 +218,40 @@ $$
 
 </details>
 
-4. **Readout-layer maximality** ($1$ constraint):
+4. **Readout-layer maximality** ($1$ constraint): $a_3 + c_3 = \alpha_3 - \gamma_3$.
+
+<details>
+<summary> details </summary>
 
 - $W_3 \Delta x$: discussed above with activation stability.
-- $\Delta W_3 x$: maximality requires $a_3 + c_3 = \alpha_3 - \gamma_3$. Specifically, $\alpha_3 =
+- $\Delta W_3 x$: maximality requires $a_3 + c_3 = \alpha_3 - \gamma_3$.
 - $\Delta W_3 \Delta x$: use maximality constraint above to obtain the constant constraint $u_3 - \alpha_3$. No constraint here.
 
+</details>
+
+The analysis above assumes no catastrophic cancellation of leading terms.
+
+### Concrete prescriptions
+
+Let's pick the $a = 0$ gauge with no forward multipliers. This gives the largest gradients and is most robust to $\epsilon$-choices; this is also the most natural gauge for constraints, making clear that **stability implies initialization** and **maximality implies lr** scaling. This gauge couples width to weight-decay, but let's use weight-norm in 2026, alas. From now on, let's assume Muon / AdamW.
+$$
+    \tilde a = 0, \quad \tilde b = b + a, \quad \tilde c = c + a
+$$
+Let's further simplify $\alpha := \alpha_2 = \alpha_3 = \{\tfrac 1 2, 1\}$ corresponding to no / full alignment, respectively.
+
+|          | Embedding |  | Hidden |  | Readout |  |
+| -------- | --------- | --- | ------ | --- | ------- | --- |
+|          | $\tilde b_1$ | $\tilde c_1$ | $\tilde b_2$ | $\tilde c_2$ | $\tilde b_3$ | $\tilde c_3$ |
+| **MuP** | $0$ | $-\gamma$ | $\tfrac12$ | $\alpha - \gamma$ | $1$ | $\alpha - \gamma$ |
+| **SP**  | $0$ | $\alpha - \gamma + \tfrac12$ | $\tfrac12$ | $\alpha - \gamma + \tfrac12$ | $\tfrac12$ | $\alpha - \gamma + \tfrac12$ |
+| **NTK** | $0$ | $\alpha - \gamma$ | $\tfrac12$ | $\alpha - \gamma + \tfrac12$ | $\tfrac12$ | $\alpha - \gamma + \tfrac12$ |
+| **SP\*, no-alignment** | $0$ | $\tfrac12$ | $\tfrac12$ | $\tfrac12$ | $\tfrac12$ | $\tfrac12$ |
+| **MuP\*, no-alignment** | $0$ | $0$ | $\tfrac12$ | $0$ | $1$ | $\tfrac12$ |
+| **SP\*, full-alignment** | $0$ | $1$ | $\tfrac12$ | $1$ | $\tfrac12$ | $1$ |
+| **MuP\*, full-alignment** | $0$ | $0$ | $\tfrac12$ | $\tfrac12$ | $1$ | $1$ |
+
+**MuP\***: AdamW ($\gamma = 0$) on embedding and readout, Muon ($\gamma = \tfrac12$) on hidden.
+
+Some remarks in order:
+- The defining characteristic of SP is consistent lr and initialization rules across components.
+- NTK minimally makes the embedding more learnable compared to SP.
