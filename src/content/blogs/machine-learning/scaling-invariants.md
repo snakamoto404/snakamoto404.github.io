@@ -1,9 +1,12 @@
 ---
 title: "Scaling invariants: width-μP"
 date: 2026-10-11
+summary: "We look into width-μP carefully for the full chain of logic from axioms to scary tables."
 ---
 
 Consider a linear layer $W:\mathbb R^n\to \mathbb R^p$ with input $x$ and output $z$. As we continuously scale up $n\mapsto kn$ and potentially $p\mapsto kp$, we want the layer to have **desirable scaling properties / symmetries** with respect to width.
+
+The upshot is that, while the **Standard Parameterization (SP)** picks a uniform lr across (embedding, hidden, readout) layers, thinking about it carefully allows for more efficient reading.
 
 Read [Everett et al.](https://arxiv.org/abs/2407.05872) and [assignment 2 + optimization-1 lecture of CS312](https://deep-learning-alchemy.github.io/) for details.
 
