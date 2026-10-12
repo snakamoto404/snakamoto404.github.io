@@ -1,0 +1,17 @@
+{
+  "terminal.integrated.env.osx": {
+    "PATH": "${workspaceFolder}/.tools/node/bin:${env:PATH}"
+  },
+  "editor.wordWrap": "on",
+  "files.trimTrailingWhitespace": true,
+  "files.insertFinalNewline": true,
+  "files.watcherExclude": {
+    "**/.tools/**": true,
+    "**/dist/**": true
+  },
+  "search.exclude": {
+    "**/.tools": true,
+    "**/dist": true,
+    "**/.astro": true
+  }
+}

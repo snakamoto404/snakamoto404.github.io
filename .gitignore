@@ -3,5 +3,6 @@ node_modules/
 dist/
 .env
 .DS_Store
+.tools/
 
 /src/content/blogs/machine-learning/ot-generative-3-*.md

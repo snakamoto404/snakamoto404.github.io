@@ -46,6 +46,23 @@ npm run dev
 npm run build
 ```
 
+## VS Code writing workflow
+
+This local checkout includes Node 20.20.2 in ignored `.tools/node/`. New VS Code
+terminals automatically use it; dependencies are already installed with `npm ci`.
+The Astro extension provides `.astro` language support.
+
+- Run **Tasks: Run Task → Dev: live preview**, then open http://localhost:4321.
+  Saving Markdown updates the browser automatically. Stop the task with Ctrl+C.
+- Press **Cmd+Shift+B** for a production build; generated pages are in `dist/`.
+- Write posts in `src/content/blogs/<topic>/`. The μP scaffold demonstrates
+  `:::theorem[Title]{#label}`, `:ref[label]`, math, and Markdown reference links.
+- Deprecated posts are excluded from both dev and production pages by
+  `DEPRECATED_BLOG_SLUGS` in `src/utils/blogVisibility.ts`; their source is retained.
+
+For a terminal outside VS Code, run `export PATH="$PWD/.tools/node/bin:$PATH"`
+from this checkout first. Other clones can use the standard Node setup above.
+
 ## Add a new daily archive entry
 
 Create a markdown file in `src/content/archive/` named `YYYY-MM-DD.md`:
