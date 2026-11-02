@@ -1,0 +1,97 @@
+---
+title: "Options, heat diffusion, and quantum mechanics!"
+date: 2026-08-07
+summary: "Writeup and notes of a Jane Street summer intern class that I tought in 2026."
+---
+
+import Plot from '../../../components/Plot.astro';
+
+Intro paragraph: **bold** for key terms, and inline math like $\partial_t u = \tfrac12\sigma^2 \partial_{xx} u$.
+Link to references like [Black–Scholes](https://en.wikipedia.org/wiki/Black%E2%80%93Scholes_model).
+
+## Setup
+
+:::definition[Heat kernel]{#def-heat-kernel}
+The heat kernel on $\R$ is
+$$
+\begin{equation}
+    K_t(x) = \df{1}{\sqrt{4\pi t}} e^{-x^2/(4t)}, \qquad t > 0.
+\end{equation}
+$$
+:::
+
+:::remark
+Remarks and examples are unnumbered and use a muted box.
+:::
+
+## Main results
+
+:::theorem[Statement title]{#thm-main}
+State the theorem here. For example, $u(t,x) = (K_t * u_0)(x)$ solves $\pd{t} u = \pd{x}^2 u$ with $u(0,\cdot)=u_0$.
+:::
+
+<details>
+<summary>Proof of the theorem</summary>
+
+Hand-written collapsible proof (works in `.md` too). Display math:
+$$
+\begin{aligned}
+    \hat u(t,\xi) &= e^{-\xi^2 t}\,\hat u_0(\xi).
+\end{aligned}
+$$
+
+</details>
+
+:::proposition{#prp-second}
+A numbered proposition, referenced below as :ref[prp-second] and :ref[thm-main].
+:::
+
+:::proof
+Directive-based proof: collapsed by default (use `:::proof{open}` to start expanded).
+A QED square is added automatically.
+:::
+
+:::lemma{#lem-aux}
+An auxiliary lemma.
+:::
+
+:::corollary{#cor-aux}
+A corollary of :ref[lem-aux].
+:::
+
+:::example
+An unnumbered example, e.g. pricing a European call $C = \E[(S_T-K)_+]$ under a risk-neutral measure.
+:::
+
+## Options ↔ heat ↔ quantum
+
+Short subsection scaffold: three columns of the dictionary.
+
+### Options
+
+TODO
+
+### Heat diffusion
+
+TODO
+
+### Quantum mechanics
+
+TODO: e.g. Wick rotation $t \mapsto -i t$ links $\pd{t}u=\tfrac12 \pd{x}^2 u$ to $i\pd{t}\psi=-\tfrac12\pd{x}^2\psi$.
+
+## Interactive figure
+
+Inline spec (animation frames/sliders also work; see `demo-interactive-plots.mdx`), or load a JSON figure from `public/plots/` via `src="/plots/name.json"`.
+
+<Plot
+  height={360}
+  caption="Placeholder: replace with your figure."
+  spec={{
+    data: [{ x: [-2, -1, 0, 1, 2], y: [0.05, 0.24, 0.4, 0.24, 0.05], mode: 'lines', name: 'u(t, x)' }],
+    layout: { xaxis: { title: { text: 'x' } }, yaxis: { title: { text: 'u' } } },
+  }}
+/>
+
+## References
+
+- TODO
