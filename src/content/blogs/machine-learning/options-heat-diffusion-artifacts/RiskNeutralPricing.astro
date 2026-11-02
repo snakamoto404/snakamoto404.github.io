@@ -13,11 +13,11 @@
         <g transform={`translate(${x} ${y})`}>
           <g class="stock">
             <rect width="90" height="40" />
-            <text x="45" y="28">{stock}</text>
+            <text x="45" y="26">{stock}</text>
           </g>
           <g class:list={['call', 'reveal', reveal]} transform="translate(0 40)">
             <rect width="90" height="32" />
-            <text x="45" y="24">{call}</text>
+            <text x="45" y="22">{call}</text>
           </g>
         </g>
       ))}
@@ -69,10 +69,11 @@
   .stock { color: var(--pricing-blue); }
   .call { color: var(--pricing-green); }
   rect { fill: currentColor; fill-opacity: 0.08; stroke: currentColor; stroke-opacity: 0.35; }
-  text { fill: currentColor; font-size: 24px; text-anchor: middle; font-variant-numeric: tabular-nums; }
+  text { fill: currentColor; font-size: 20px; text-anchor: middle; font-variant-numeric: tabular-nums; }
+  .call text { font-size: 18px; }
   .axis-label, .tick-label { fill: var(--foreground); font-size: 12px; }
   .tick-label { font-size: 11px; }
-  .point-label { font-size: 11px; }
+  .call .point-label { font-size: 11px; }
   .payoff-curve { fill: none; stroke: currentColor; stroke-width: 2; stroke-linejoin: round; }
   .payoff-point { fill: currentColor; stroke: var(--background); stroke-width: 1; }
   .reveal { opacity: 1; transition: opacity 250ms ease; }

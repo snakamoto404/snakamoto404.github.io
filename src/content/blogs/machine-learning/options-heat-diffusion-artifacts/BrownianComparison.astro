@@ -1,0 +1,174 @@
+---
+import { renderMathLabels } from './figure-math.mjs';
+import { BROWNIAN, STACKED, densityPath, initialParticles, project, stackedMarginalFrames } from './brownian-model.mjs';
+
+const initial = initialParticles();
+const initialStacks = stackedMarginalFrames()[0];
+const equations = renderMathLabels(['\\rho_t(x)', 'dX_t=dW_t', 'dX_t=-\\frac12\\partial_x\\log\\rho_t\\,dt']);
+const modes = [
+  { mode: 'marginal', title: 'Marginal', description: 'Three hundred Brownian balls, binned into one-ball-wide columns. Discrete time steps hold their stacked layouts, then particles hop into the next stacks. The curve is the expected Gaussian density.' },
+  { mode: 'brownian', title: 'Brownian motion', description: 'Brownian particles on the floor of a perspective plot. Their random trajectories persist behind the current section. Gaussian section heights are normalized to the same peak.' },
+  { mode: 'score', title: 'Score flow', description: 'Deterministic negative half-score flow from the same initial Gaussian. Smooth trajectories persist on the floor, with the same evolving Gaussian marginals as Brownian motion.' },
+];
+---
+
+<brownian-comparison>
+  <figure>
+    <div class="comparison-panels">
+      {modes.map(({ mode, title, description }, index) => (
+        <div class:list={['comparison-pane', mode]} data-mode={mode}>
+          <svg viewBox="0 0 300 230" role="img" aria-label={description}>
+            <defs>
+              <clipPath id={`brownian-comparison-${mode}-plot`}><rect x="3" y="2" width="294" height="224" /></clipPath>
+              {mode !== 'marginal' && <>
+                <clipPath id={`brownian-comparison-${mode}-reveal`}><rect data-trail-reveal x="0" y={BROWNIAN.floorY} width="300" height="0" /></clipPath>
+                <linearGradient id={`brownian-comparison-${mode}-fade`}>
+                  <stop offset="0" stop-color="white" stop-opacity="0" />
+                  <stop offset="0.06" stop-color="white" />
+                  <stop offset="0.94" stop-color="white" />
+                  <stop offset="1" stop-color="white" stop-opacity="0" />
+                </linearGradient>
+                <mask id={`brownian-comparison-${mode}-soft`} maskContentUnits="objectBoundingBox" x="0" y="-0.1" width="1" height="1.2">
+                  <rect y="-0.1" width="1" height="1.2" fill={`url(#brownian-comparison-${mode}-fade)`} />
+                </mask>
+              </>}
+            </defs>
+            {mode === 'marginal' ? <>
+              <path class="axis" d={`M10 ${BROWNIAN.floorY}H290`} />
+            </> : <>
+              <g mask={`url(#brownian-comparison-${mode}-soft)`}>
+                <path class="trajectories" data-floor-path clip-path={`url(#brownian-comparison-${mode}-reveal)`} />
+              </g>
+              <path class="endpoint-density" d={densityPath(0, true)} mask={`url(#brownian-comparison-${mode}-soft)`} />
+              <path class="endpoint-density" d={densityPath(BROWNIAN.horizon, true)} mask={`url(#brownian-comparison-${mode}-soft)`} />
+            </>}
+            <g clip-path={`url(#brownian-comparison-${mode}-plot)`}>
+              <path class="density" data-density d={densityPath(0, mode !== 'marginal')} mask={mode !== 'marginal' ? `url(#brownian-comparison-${mode}-soft)` : undefined} />
+              <g class="particles">
+                {Array.from(mode === 'marginal' ? initialStacks : initial, (_, index) => {
+                  const point = mode === 'marginal' ? initialStacks[index] : project(initial[index], 0);
+                  return <circle data-particle={index} cx={point.x} cy={point.y} r={mode === 'marginal' ? STACKED.radius : 2.2} />;
+                })}
+              </g>
+            </g>
+          </svg>
+          <div class="heading"><span>{title}</span><span class="equation" set:html={equations[index]} /></div>
+        </div>
+      ))}
+    </div>
+  </figure>
+</brownian-comparison>
+
+<style>
+  brownian-comparison { --brownian-blue: #1d6fd1; --brownian-green: #15803d; display: block; margin: 1rem 0; }
+  :global(html[data-theme='dark']) brownian-comparison { --brownian-blue: #60a5fa; --brownian-green: #4ade80; }
+  figure { margin: 0; }
+  .comparison-panels { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); }
+  .comparison-pane { min-width: 0; --particle-color: var(--brownian-blue); }
+  .comparison-pane + .comparison-pane { border-left: 1px solid var(--border); }
+  .score { --particle-color: var(--brownian-green); }
+  .heading { display: flex; flex-direction: column; align-items: center; gap: 0.1rem; padding-top: 0.1rem; min-height: 2.1rem; font-size: 0.75rem; line-height: 1.2; }
+  .equation { font-size: 0.7rem; }
+  svg { display: block; width: 100%; height: auto; }
+  path { fill: none; }
+  .axis { stroke: var(--foreground); stroke-opacity: 0.25; stroke-width: 0.9; }
+  .endpoint-density { stroke: var(--foreground); stroke-opacity: 0.55; stroke-width: 1.1; }
+  .density { stroke: var(--maroon); stroke-width: 1.5; }
+  .trajectories { stroke: var(--particle-color); stroke-width: 0.7; stroke-opacity: 0.2; }
+  .particles circle { fill: var(--particle-color); fill-opacity: 0.85; }
+  .marginal .particles circle { stroke: var(--background); stroke-width: 0.3; }
+  @media (max-width: 600px) {
+    brownian-comparison { overflow-x: auto; }
+    figure { min-width: 600px; }
+  }
+</style>
+
+<script>
+  import { BROWNIAN, brownianPaths, brownianPosition, densityPath, floorPaths, initialParticles, project, scorePosition, stackedMarginalFrames, stackedMarginalState } from './brownian-model.mjs';
+
+  class BrownianComparison extends HTMLElement {
+    private controller?: AbortController;
+    private observer?: IntersectionObserver;
+    private frame = 0;
+
+    connectedCallback() {
+      if (this.controller) return;
+      this.controller = new AbortController();
+      const { signal } = this.controller;
+      const initial = initialParticles();
+      const paths = brownianPaths(initial);
+      const stacks = stackedMarginalFrames();
+      const reducedMotion = window.matchMedia?.('(prefers-reduced-motion: reduce)');
+      let playing = !reducedMotion?.matches;
+      let visible = !('IntersectionObserver' in window);
+      let time = 0;
+      let lastStamp: number | null = null;
+      let hold = 0;
+      const panels = Array.from(this.querySelectorAll<HTMLElement>('[data-mode]'), (panel) => ({
+        mode: panel.dataset.mode!,
+        density: panel.querySelector<SVGPathElement>('[data-density]')!,
+        particles: panel.querySelectorAll<SVGCircleElement>('[data-particle]'),
+        reveal: panel.querySelector<SVGRectElement>('[data-trail-reveal]'),
+      }));
+      this.querySelector<SVGPathElement>('.brownian [data-floor-path]')!.setAttribute('d', floorPaths(initial, paths));
+      this.querySelector<SVGPathElement>('.score [data-floor-path]')!.setAttribute('d', floorPaths(initial, paths, true));
+
+      const render = () => {
+        this.dataset.time = time.toFixed(3);
+        const brownian = Array.from(initial, (_, index) => brownianPosition(paths, index, time));
+        const marginal = stackedMarginalState(stacks, time);
+        panels.forEach(({ mode, density, particles, reveal }) => {
+          const perspective = mode !== 'marginal';
+          density.setAttribute('d', densityPath(perspective ? time : marginal.time, perspective));
+          particles.forEach((particle, index) => {
+            const x = mode === 'score' ? scorePosition(initial[index], time) : brownian[index];
+            const point = perspective ? project(x, time) : marginal.points[index];
+            particle.setAttribute('cx', point.x.toFixed(2));
+            particle.setAttribute('cy', point.y.toFixed(2));
+          });
+          if (reveal) {
+            const y = project(0, time).y;
+            reveal.setAttribute('y', String(y));
+            reveal.setAttribute('height', String(BROWNIAN.floorY - y));
+          }
+        });
+      };
+      const stop = () => {
+        cancelAnimationFrame(this.frame);
+        this.frame = 0;
+        lastStamp = null;
+      };
+      const tick = (stamp: number) => {
+        this.frame = 0;
+        if (!playing || !visible || document.hidden) { lastStamp = null; return; }
+        if (lastStamp !== null) {
+          const elapsed = Math.min((stamp - lastStamp) / 1000, 0.1);
+          if (time < BROWNIAN.horizon) time = Math.min(BROWNIAN.horizon, time + elapsed * BROWNIAN.horizon / 10);
+          else { hold += elapsed; if (hold >= 1.4) { time = 0; hold = 0; } }
+        }
+        lastStamp = stamp;
+        render();
+        this.frame = requestAnimationFrame(tick);
+      };
+      const sync = () => {
+        stop();
+        render();
+        if (playing && visible && !document.hidden) this.frame = requestAnimationFrame(tick);
+      };
+      document.addEventListener('visibilitychange', sync, { signal });
+      reducedMotion?.addEventListener('change', () => { playing = !reducedMotion.matches; sync(); }, { signal });
+      if ('IntersectionObserver' in window) {
+        this.observer = new IntersectionObserver(([entry]) => { visible = entry.isIntersecting; sync(); }, { threshold: 0.05 });
+        this.observer.observe(this);
+      }
+      sync();
+    }
+
+    disconnectedCallback() {
+      this.controller?.abort(); this.controller = undefined;
+      this.observer?.disconnect(); this.observer = undefined;
+      cancelAnimationFrame(this.frame); this.frame = 0;
+    }
+  }
+  if (!customElements.get('brownian-comparison')) customElements.define('brownian-comparison', BrownianComparison);
+</script>

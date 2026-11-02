@@ -1,0 +1,269 @@
+---
+const derivatives = [
+  { name: '100-call', color: 'call', up: '$20', down: '$0', fair: '$20/3', curve: 'M26 86H70L136 41', upY: 56, downY: 86 },
+  { name: '100-fut', color: 'future', up: '$20', down: '−$10', fair: '$0', curve: 'M26 116L136 41', upY: 56, downY: 101 },
+  { name: '110-put', color: 'put', up: '$0', down: '$20', fair: '$40/3', curve: 'M26 41L92 86H136', upY: 86, downY: 56 },
+];
+const nodes = [{ x: 124, y: 58, value: '$100' }, { x: 346, y: 8, value: '$120' }, { x: 346, y: 194, value: '$90' }];
+const stateDollars = [
+  { name: '↑ dollar', color: 'up-dollar', reveal: 8, up: '$1', down: '$0', fair: '$1/3', symbol: 'q', value: '1/3', x: 114 },
+  { name: '↓ dollar', color: 'down-dollar', reveal: 9, up: '$0', down: '$1', fair: '$2/3', symbol: 'q̄', value: '2/3', x: 48 },
+];
+---
+
+<risk-neutral-measure id="risk-neutral-measure--probabilities" tabindex="-1">
+  <span id="risk-neutral-measure--state-dollar-portfolios" class="slide-anchor" aria-hidden="true"></span>
+  <figure class="slide">
+    <div class="stump">
+      <svg viewBox="0 0 440 380" role="img" aria-live="polite" aria-label="SBUX is $100 today and $120 or $90 at expiry. Reveal the derivatives with the arrows.">
+        <path class="axis" d="M216 77L334 27M326 26L334 27L329 34" />
+        <path class="axis down-branch" d="M216 77L334 213M331 205L334 213L326 212" />
+        <foreignObject x="208" y="0" width="128" height="36">
+          <div class="probability up" xmlns="http://www.w3.org/1999/xhtml">
+            <span class="real-probability"><slot name="up-probability" /></span>
+            <span class="replacement" data-risk-neutral aria-hidden="true"><slot name="up-risk-neutral" /></span>
+          </div>
+        </foreignObject>
+        <foreignObject class="down-probability" x="208" y="224" width="128" height="40">
+          <div class="probability down" xmlns="http://www.w3.org/1999/xhtml">
+            <span class="real-probability"><slot name="down-probability" /></span>
+            <span class="replacement" data-risk-neutral aria-hidden="true"><slot name="down-risk-neutral" /></span>
+          </div>
+        </foreignObject>
+        {nodes.map(({ x, y, value }) => (
+          <g class="stock" transform={`translate(${x} ${y})`}>
+            <rect width="82" height="38" />
+            <text class="stock-price" x="41" y="27">{value}</text>
+          </g>
+        ))}
+        {derivatives.map(({ name, color, up, down, fair }, index) => (
+          <g class:list={['derivative', color]} data-reveal={index + 1}>
+            <g transform={`translate(19 ${96 + index * 26})`}>
+              <rect width="105" height="26" />
+              <text class="name" x="52.5" y="19">{name}</text>
+            </g>
+            {nodes.map(({ x, y }, nodeIndex) => (
+              <g transform={`translate(${x} ${y + 38 + index * 26})`}>
+                <rect width="82" height="26" />
+                <text class="payout" x="41" y="19" data-fair={nodeIndex === 0 ? fair : undefined}>{nodeIndex === 0 ? '???' : nodeIndex === 1 ? up : down}</text>
+              </g>
+            ))}
+          </g>
+        ))}
+        {stateDollars.map(({ name, color, reveal, up, down, fair, symbol, value }, index) => (
+          <g class:list={['derivative', color]} data-reveal={reveal}>
+            <g transform={`translate(19 ${174 + index * 26})`}>
+              <rect width="105" height="26" />
+              <text class="name" x="52.5" y="19">{name}</text>
+            </g>
+            {nodes.map(({ x, y }, nodeIndex) => (
+              <g transform={`translate(${x} ${y + 116 + index * 26})`}>
+                <rect width="82" height="26" />
+                {nodeIndex === 0 ? <>
+                  <text class="payout state-price" x="41" y="19" data-state-fair={fair}>???</text>
+                  <text class="payout state-weight" x="41" y="19" aria-hidden="true"><tspan class="weight-symbol">{symbol}</tspan>{` = ${value}`}</text>
+                </> : <text class="payout" x="41" y="19">{nodeIndex === 1 ? up : down}</text>}
+              </g>
+            ))}
+          </g>
+        ))}
+      </svg>
+      <div class="controls" hidden>
+        <button type="button" data-direction="-1" aria-label="Previous slide">←</button>
+        <button type="button" data-direction="1" aria-label="Next slide">→</button>
+      </div>
+    </div>
+    <div class="right-panel">
+      <div class="plots">
+      {derivatives.map(({ name, color, up, down, curve, upY, downY }, index) => (
+        <svg class:list={['payoff', color]} viewBox="0 20 160 110" role="img" aria-label={`${name}: pays ${up} at $120 and ${down} at $90.`}>
+          <path class="axis" d="M26 86H148M143 83L148 86L143 89M26 118V25M23 30L26 25L29 30" />
+          {index === 2 && <>
+            <text class="axis-label" transform="translate(9 72) rotate(-90)">$ payout</text>
+            <text class="axis-label" x="87" y="111">$ price at expiry</text>
+          </>}
+          <path class="curve" d={curve} />
+          <circle class="point" cx="48" cy={downY} r="2" />
+          <circle class="point" cx="114" cy={upY} r="2" />
+          <text class="annotation" x={color === 'future' ? 62 : 48} y={color === 'future' ? downY + 15 : downY - 7}>{down}</text>
+          <text class="annotation" x="114" y={upY - 7}>{up}</text>
+        </svg>
+      ))}
+      <svg class="payoff derivative state-dollars" data-reveal="8" viewBox="0 20 160 110" role="img" aria-label="State-dollar payouts: the up-dollar pays $1 only at $120; the down-dollar pays $1 only at $90. Shaded spikes mark the two discrete states.">
+        <path class="axis" d="M26 86H148M143 83L148 86L143 89M26 118V25M23 30L26 25L29 30" />
+        {stateDollars.map(({ color, reveal, x }) => (
+          <g class:list={['derivative', color]} data-reveal={reveal}>
+            <path class="spike" d={`M${x - 5} 86L${x} 41L${x + 5} 86Z`} />
+            <circle class="point" cx={x} cy="41" r="2" />
+            <text class="annotation" x={x} y="34">$1</text>
+          </g>
+        ))}
+      </svg>
+      </div>
+      <div class="explanations" aria-live="polite">
+        <div class="explanation call" data-portfolio="4" aria-hidden="true"><slot name="call-portfolio" /></div>
+        <div class="explanation future" data-portfolio="5" aria-hidden="true"><slot name="future-portfolio" /></div>
+        <div class="explanation put" data-portfolio="6" aria-hidden="true"><slot name="put-portfolio" /></div>
+        <div class="explanation up-dollar" data-portfolio="8" aria-hidden="true">↑ dollar: $1 if SBUX goes up; $0 otherwise.</div>
+        <div class="explanation down-dollar" data-portfolio="9" aria-hidden="true">↓ dollar: $1 if SBUX goes down; $0 otherwise.</div>
+        <div class="explanation" data-portfolio="10" aria-hidden="true">
+          <span class="up-dollar">↑ dollar: (1/30 SBUX, −$3 cash), V = $1/3</span><br />
+          <span class="down-dollar">↓ dollar: (−1/30 SBUX, $4 cash), V = $2/3</span>
+        </div>
+      </div>
+    </div>
+  </figure>
+</risk-neutral-measure>
+
+<style>
+  risk-neutral-measure {
+    --measure-blue: #1d6fd1;
+    --measure-call: #15803d;
+    --measure-future: #c27618;
+    --measure-put: #9a3642;
+    --measure-up: #777b3c;
+    --measure-down: #a65a60;
+    display: block;
+    margin: 1rem 0;
+  }
+  .slide-anchor { display: block; height: 0; }
+  :global(html[data-theme='dark']) risk-neutral-measure {
+    --measure-blue: #60a5fa;
+    --measure-call: #4ade80;
+    --measure-future: #f2b35f;
+    --measure-put: #d9909a;
+    --measure-up: #c0c582;
+    --measure-down: #dca0a5;
+  }
+  .slide { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 1rem; align-items: stretch; margin: 0; }
+  .stump { position: relative; }
+  .right-panel { display: flex; flex-direction: column; min-width: 0; }
+  .plots { display: grid; grid-template-columns: 1fr 1fr; gap: 0.25rem; }
+  .explanations { display: grid; align-items: start; justify-items: center; margin-top: 0.25rem; }
+  .explanation { grid-area: 1 / 1; text-align: center; font-size: 0.8rem; line-height: 1.5; }
+  .explanation[aria-hidden='true'] { visibility: hidden; }
+  svg { display: block; width: 100%; height: auto; }
+  .stock { color: var(--measure-blue); }
+  .call { color: var(--measure-call); }
+  .future { color: var(--measure-future); }
+  .put { color: var(--measure-put); }
+  .up-dollar { color: var(--measure-up); }
+  .down-dollar { color: var(--measure-down); }
+  rect { fill: currentColor; fill-opacity: 0.08; stroke: currentColor; stroke-opacity: 0.35; }
+  text { fill: currentColor; text-anchor: middle; font-variant-numeric: tabular-nums; }
+  .stock-price { font-size: 24px; }
+  .name { font-size: 16px; }
+  .payout { font-size: 16px; }
+  .probability { display: flex; align-items: center; justify-content: center; gap: 10px; min-height: 32px; color: var(--foreground); font-size: 18px; line-height: 1; text-align: center; white-space: nowrap; }
+  .real-probability, .replacement { position: relative; display: inline-flex; align-items: center; justify-content: center; flex-shrink: 0; }
+  .real-probability { min-width: 20px; }
+  [data-risk-neutral][aria-hidden='true'] { visibility: hidden; }
+  [data-measure='risk-neutral'] .real-probability { opacity: 0.45; }
+  [data-measure='risk-neutral'] .real-probability::after { content: ''; position: absolute; top: 50%; left: 0; right: 0; height: 1px; background: currentColor; transform: rotate(-25deg); }
+  .axis { fill: none; stroke: var(--foreground); stroke-opacity: 0.55; stroke-linecap: round; stroke-linejoin: round; }
+  .axis-label { fill: var(--foreground); font-size: 9px; }
+  .annotation { font-size: 9px; }
+  .spike { fill: currentColor; fill-opacity: 0.2; stroke: currentColor; stroke-width: 1.5; stroke-linejoin: round; }
+  .curve { fill: none; stroke: currentColor; stroke-width: 1.5; stroke-linejoin: round; }
+  .point { fill: currentColor; stroke: var(--background); stroke-width: 0.75; }
+  .derivative { opacity: 1; transition: opacity 250ms ease; }
+  .derivative[aria-hidden='true'] { opacity: 0; visibility: hidden; }
+  .state-price, .state-weight { transition: opacity 300ms ease; }
+  .state-price[aria-hidden='true'], .state-weight[aria-hidden='true'] { opacity: 0; }
+  .weight-symbol { font-style: italic; }
+  .controls { position: absolute; bottom: calc(18 / 380 * 100%); left: calc(19 / 440 * 100%); width: calc(187 / 440 * 100%); display: flex; justify-content: center; gap: 0.5rem; }
+  .controls[hidden] { display: none; }
+  button { width: 36px; height: 36px; padding: 0; border: 0; background: transparent; color: var(--foreground); font: inherit; font-size: 22px; }
+  button:disabled { opacity: 0.2; }
+  @media (max-width: 640px) {
+    .slide { grid-template-columns: 1fr; }
+    .stump { width: 100%; max-width: 440px; margin-inline: auto; }
+    .plots { width: 100%; max-width: 340px; margin-inline: auto; }
+  }
+  @media (prefers-reduced-motion: reduce) {
+    .derivative, .state-price, .state-weight { transition: none; }
+  }
+</style>
+
+<script>
+  class RiskNeutralMeasure extends HTMLElement {
+    private navigationController?: AbortController;
+
+    connectedCallback() {
+      if (this.navigationController) return;
+      this.navigationController = new AbortController();
+      const { signal } = this.navigationController;
+      const linkedSteps = new Map([
+        [`#${this.id}`, 7],
+        ['#risk-neutral-measure--state-dollar-portfolios', 10],
+      ]);
+      const rows = this.querySelectorAll<SVGElement>('[data-reveal]');
+      const prices = this.querySelectorAll<SVGTextElement>('[data-fair]');
+      const portfolios = this.querySelectorAll<HTMLElement>('[data-portfolio]');
+      const probabilities = this.querySelectorAll<HTMLElement>('[data-risk-neutral]');
+      const statePrices = this.querySelectorAll<SVGTextElement>('[data-state-fair]');
+      const stateWeights = this.querySelectorAll<SVGTextElement>('.state-weight');
+      const buttons = this.querySelectorAll<HTMLButtonElement>('button');
+      const descriptions = [
+        'SBUX is $100 today and $120 or $90 at expiry.',
+        'SBUX is $100 today and $120 or $90 at expiry. The 100-call pays $20 or $0; its price today is unknown.',
+        'SBUX is $100 today and $120 or $90 at expiry. The 100-call pays $20 or $0, and the 100-future pays $20 or negative $10; their prices today are unknown.',
+        'SBUX is $100 today and $120 or $90 at expiry. The 100-call pays $20 or $0, the 100-future pays $20 or negative $10, and the 110-put pays $0 or $20; their prices today are unknown.',
+        'The 100-call is replicated by 2/3 SBUX share and negative $60 cash. Its fair value is 20/3 dollars.',
+        'The 100-future is replicated by 1 SBUX share and negative $100 cash. Its fair value is zero.',
+        'The 110-put is replicated by negative 2/3 SBUX share and $80 cash. Its fair value is 40/3 dollars.',
+        'All three fair values remain. The physical probabilities p and p-bar are crossed out and replaced with risk-neutral probabilities q = 1/3 and q-bar = 2/3.',
+        'The up-dollar pays $1 if SBUX ends at $120 and $0 if it ends at $90. Its current price is unknown.',
+        'The down-dollar pays $1 if SBUX ends at $90 and $0 if it ends at $120. Its current price is unknown. Both state-dollar payouts share the shaded spike plot.',
+        'The up-dollar costs $1/3 today, replicated by 1/30 SBUX share and negative $3 cash. The down-dollar costs $2/3 today, replicated by negative 1/30 SBUX share and $4 cash.',
+        'The state-dollar prices become the risk-neutral weights in the same cells: q = 1/3 for the up-dollar, and q-bar = 2/3 for the down-dollar.',
+      ];
+      let step = linkedSteps.get(window.location.hash) ?? 0;
+      const render = () => {
+        rows.forEach((row) => row.setAttribute('aria-hidden', String(Number(row.dataset.reveal) > step)));
+        prices.forEach((price, index) => { price.textContent = step >= index + 4 ? price.dataset.fair! : '???'; });
+        portfolios.forEach((portfolio) => portfolio.setAttribute('aria-hidden', String(Number(portfolio.dataset.portfolio) !== step)));
+        probabilities.forEach((probability) => probability.setAttribute('aria-hidden', String(step < 7)));
+        statePrices.forEach((price) => {
+          price.textContent = step >= 10 ? price.dataset.stateFair! : '???';
+          price.setAttribute('aria-hidden', String(step === 11));
+        });
+        stateWeights.forEach((weight) => weight.setAttribute('aria-hidden', String(step !== 11)));
+        this.dataset.measure = step >= 7 ? 'risk-neutral' : 'physical';
+        this.dataset.step = String(step);
+        this.querySelector('svg')!.setAttribute('aria-label', descriptions[step]);
+        buttons[0].disabled = step === 0;
+        buttons[1].disabled = step === descriptions.length - 1;
+      };
+      buttons.forEach((button) => button.addEventListener('click', () => {
+        step = Math.max(0, Math.min(descriptions.length - 1, step + Number(button.dataset.direction)));
+        render();
+      }, { signal }));
+      window.addEventListener('hashchange', () => {
+        const linkedStep = linkedSteps.get(window.location.hash);
+        if (linkedStep === undefined) return;
+        step = linkedStep;
+        render();
+      }, { signal });
+      document.addEventListener('click', (event) => {
+        if (event.defaultPrevented || event.button !== 0 || event.metaKey || event.ctrlKey || event.shiftKey || event.altKey) return;
+        const link = event.target instanceof Element ? event.target.closest('a') : null;
+        if (!link || link.hasAttribute('download') || (link.target && link.target !== '_self')) return;
+        const linkedStep = linkedSteps.get(link.getAttribute('href') ?? '');
+        if (linkedStep === undefined) return;
+        step = linkedStep;
+        render();
+      }, { signal });
+      render();
+      this.querySelector<HTMLElement>('.controls')!.hidden = false;
+    }
+
+    disconnectedCallback() {
+      this.navigationController?.abort();
+      this.navigationController = undefined;
+    }
+  }
+  if (!customElements.get('risk-neutral-measure')) {
+    customElements.define('risk-neutral-measure', RiskNeutralMeasure);
+  }
+</script>

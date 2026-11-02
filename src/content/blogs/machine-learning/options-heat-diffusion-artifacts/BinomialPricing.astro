@@ -1,0 +1,170 @@
+---
+import { renderMathLabels } from './figure-math.mjs';
+
+const nodes = [
+  { x: 60, y: 150, stock: '$100', value: '$1/2', tex: '\\$1/2', reveal: 4 },
+  { x: 260, y: 70, stock: '$101', value: '$1', tex: '\\$1', reveal: 2 },
+  { x: 260, y: 230, stock: '$99', value: '$0', tex: '\\$0', reveal: 3 },
+  { x: 460, y: 26, stock: '$102', value: '$2', tex: '\\$2', reveal: 0 },
+  { x: 460, y: 114, stock: '$100', value: '$0', tex: '\\$0', reveal: 0 },
+  { x: 460, y: 202, stock: '$100', value: '$0', tex: '\\$0', reveal: 0 },
+  { x: 460, y: 290, stock: '$98', value: '$0', tex: '\\$0', reveal: 0 },
+];
+const labels = renderMathLabels(nodes.map(({ tex }) => tex));
+const branchLabels = [
+  { x: 388, y: 71, reveal: 2 },
+  { x: 388, y: 237, reveal: 3 },
+  { x: 188, y: 151, reveal: 4 },
+];
+const probabilities = renderMathLabels(branchLabels.map(() => 'q=1/2'));
+const stumpNodes = [
+  { x: 12, y: 71, stock: '\\$k', call: '\\$(a+b)' },
+  { x: 220, y: 10, stock: '\\$(k+1)', call: '\\$2a' },
+  { x: 220, y: 153, stock: '\\$(k-1)', call: '\\$2b' },
+];
+const stumpStocks = renderMathLabels(stumpNodes.map(({ stock }) => stock));
+const stumpValues = renderMathLabels(stumpNodes.map(({ call }) => call));
+const [stumpProbability] = renderMathLabels(['q=1/2']);
+---
+
+<binomial-pricing id="binomial-pricing--base-stump" tabindex="-1">
+  <figure>
+    <div class="panels">
+      <svg class="tree" viewBox="0 0 600 360" role="img" aria-live="polite" aria-label="Two-step stock tree: the strike-100 call pays $2, $0, $0, and $0 at expiry. Reveal the stump and work backward with the arrows.">
+        <path class="branch" d="M164 166L252 86M164 166L252 246M364 86L452 42M364 86L452 130M364 246L452 218M364 246L452 306" />
+        <path class="branch" d="M244 87L252 86L250 94M250 238L252 246L244 245M444 43L452 42L448 49M448 123L452 130L444 129M444 217L452 218L446 224M448 298L452 306L444 305" />
+        {branchLabels.map(({ x, y, reveal }, index) => (
+          <foreignObject x={x} y={y} width="64" height="30" data-branch-reveal={reveal}>
+            <div class="math-label probability" xmlns="http://www.w3.org/1999/xhtml" set:html={probabilities[index]} />
+          </foreignObject>
+        ))}
+        {nodes.map(({ x, y, stock, value, reveal }, index) => (
+          <g transform={`translate(${x} ${y})`}>
+            <g class="stock"><rect width="96" height="32" /><text x="48" y="24">{stock}</text></g>
+            <g class="call" data-reveal={reveal} transform="translate(0 32)">
+              <rect width="96" height="26" />
+              <foreignObject width="96" height="26">
+                <div class="math-label value" xmlns="http://www.w3.org/1999/xhtml">
+                  <span class="unknown" aria-hidden="true">???</span>
+                  <span class="known" data-value={value} set:html={labels[index]} />
+                </div>
+              </foreignObject>
+            </g>
+          </g>
+        ))}
+      </svg>
+      <svg class="stump" viewBox="0 0 320 232" role="img" aria-label="Base stump: a stock at k moves to k plus 1 or k minus 1, with equal risk-neutral weights q = 1/2. Payouts 2a and 2b have fair value a plus b today.">
+        <path class="branch" d="M106 90L208 29M200 30L208 29L205 37M106 90L208 172M205 164L208 172L200 171" />
+        <foreignObject x="128" y="75" width="80" height="30">
+          <div class="math-label probability" xmlns="http://www.w3.org/1999/xhtml" set:html={stumpProbability} />
+        </foreignObject>
+        {stumpNodes.map(({ x, y }, index) => (
+          <g transform={`translate(${x} ${y})`}>
+            <g class="stock">
+              <rect width="86" height="38" />
+              <foreignObject width="86" height="38"><div class="math-label stump-stock" xmlns="http://www.w3.org/1999/xhtml" set:html={stumpStocks[index]} /></foreignObject>
+            </g>
+            <g class="call" transform="translate(0 38)">
+              <rect width="86" height="32" />
+              <foreignObject width="86" height="32"><div class="math-label stump-value" xmlns="http://www.w3.org/1999/xhtml" set:html={stumpValues[index]} /></foreignObject>
+            </g>
+          </g>
+        ))}
+      </svg>
+    </div>
+    <div class="controls" hidden>
+      <button type="button" data-direction="-1" aria-label="Previous slide">←</button>
+      <button type="button" data-direction="1" aria-label="Next slide">→</button>
+    </div>
+  </figure>
+</binomial-pricing>
+
+<style>
+  binomial-pricing { --pricing-blue: #1d6fd1; --pricing-green: #15803d; display: block; max-width: 640px; margin: 1rem auto; }
+  :global(html[data-theme='dark']) binomial-pricing { --pricing-blue: #60a5fa; --pricing-green: #4ade80; }
+  figure { position: relative; margin: 0; }
+  .panels { display: grid; grid-template-columns: minmax(0, 2fr) minmax(0, 1fr); gap: 0.75rem; align-items: center; }
+  svg { display: block; width: 100%; height: auto; }
+  .branch { fill: none; stroke: var(--foreground); stroke-opacity: 0.55; stroke-linecap: round; stroke-linejoin: round; }
+  .stock { color: var(--pricing-blue); }
+  .call { color: var(--pricing-green); }
+  rect { fill: currentColor; fill-opacity: 0.08; stroke: currentColor; stroke-opacity: 0.35; }
+  text { fill: currentColor; text-anchor: middle; font-size: 20px; font-variant-numeric: tabular-nums; }
+  .math-label { display: grid; place-items: center; height: 100%; line-height: 1; }
+  .probability { color: var(--foreground); font-size: 16px; }
+  .value { font-size: 18px; }
+  .stump-stock { font-size: 20px; }
+  .stump-value { font-size: 18px; }
+  .known, .unknown { grid-area: 1 / 1; }
+  [aria-hidden='true'] { visibility: hidden; }
+  [data-current='true'] rect { stroke-opacity: 1; stroke-width: 1.5; }
+  .controls { position: absolute; top: calc(290 / 360 * 100%); right: 0; display: flex; gap: 0.25rem; }
+  .controls[hidden] { display: none; }
+  button { width: 28px; height: 28px; padding: 0; border: 0; background: transparent; color: var(--foreground); font: inherit; font-size: 20px; }
+  button:disabled { opacity: 0.2; }
+  @media (max-width: 480px) {
+    .panels { grid-template-columns: minmax(0, 2fr) minmax(0, 1fr); gap: 0.25rem; }
+    binomial-pricing { overflow-x: auto; }
+    figure { min-width: 420px; }
+  }
+</style>
+
+<script>
+  class BinomialPricing extends HTMLElement {
+    private controller?: AbortController;
+
+    connectedCallback() {
+      if (this.controller) return;
+      this.controller = new AbortController();
+      const { signal } = this.controller;
+      const linkedHash = `#${this.id}`;
+      const nodes = this.querySelectorAll<SVGGElement>('[data-reveal]');
+      const branches = this.querySelectorAll<SVGForeignObjectElement>('[data-branch-reveal]');
+      const buttons = this.querySelectorAll<HTMLButtonElement>('button');
+      const descriptions = [
+        'SBUX starts at $100 and moves up or down by $1 twice. Expiry call payouts are $2, $0, $0, and $0; earlier call values are unknown.',
+        'The base stump is shown on the right: equal risk-neutral weights q = 1/2 price payouts 2a and 2b at a plus b today.',
+        'The upper intermediate stump has q = 1/2 on both branches. Its call is worth $1.',
+        'The lower intermediate stump has q = 1/2 on both branches. Its call is worth $0.',
+        'The initial stump has q = 1/2 on both branches. The call is worth $1/2 today. All nodes are priced.',
+      ];
+      let step = window.location.hash === linkedHash ? 1 : 0;
+      const render = () => {
+        this.dataset.step = String(step);
+        this.querySelector('.stump')!.setAttribute('aria-hidden', String(step < 1));
+        branches.forEach((branch) => branch.setAttribute('aria-hidden', String(step < Number(branch.dataset.branchReveal))));
+        nodes.forEach((node) => {
+          const reveal = Number(node.dataset.reveal);
+          const known = step >= reveal;
+          node.querySelector('.known')!.setAttribute('aria-hidden', String(!known));
+          node.querySelector('.unknown')!.setAttribute('aria-hidden', String(known));
+          node.dataset.current = String(step === reveal && reveal > 0);
+        });
+        this.querySelector('.tree')!.setAttribute('aria-label', descriptions[step]);
+        buttons[0].disabled = step === 0;
+        buttons[1].disabled = step === descriptions.length - 1;
+      };
+      buttons.forEach((button) => button.addEventListener('click', () => {
+        step = Math.max(0, Math.min(descriptions.length - 1, step + Number(button.dataset.direction)));
+        render();
+      }, { signal }));
+      window.addEventListener('hashchange', () => {
+        if (window.location.hash !== linkedHash) return;
+        step = 1;
+        render();
+      }, { signal });
+      document.addEventListener('click', (event) => {
+        if (event.defaultPrevented || event.button !== 0 || event.metaKey || event.ctrlKey || event.shiftKey || event.altKey) return;
+        const link = event.target instanceof Element ? event.target.closest('a') : null;
+        if (link?.getAttribute('href') !== linkedHash || link.hasAttribute('download') || (link.target && link.target !== '_self')) return;
+        step = 1;
+        render();
+      }, { signal });
+      render();
+      this.querySelector<HTMLElement>('.controls')!.hidden = false;
+    }
+
+    disconnectedCallback() { this.controller?.abort(); this.controller = undefined; }
+  }
+  if (!customElements.get('binomial-pricing')) customElements.define('binomial-pricing', BinomialPricing);
+</script>

@@ -1,0 +1,136 @@
+---
+import { CONVOLUTION, evaluationPoints, callCurve, convolvedCall, gaussianCurve, plotX, plotY } from './call-convolution-model.mjs';
+const xTicks = Array.from({ length: CONVOLUTION.xMax - CONVOLUTION.xMin - 1 }, (_, index) => CONVOLUTION.xMin + index + 1).filter((x) => x !== 0);
+const yTicks = Array.from({ length: Math.ceil(CONVOLUTION.yMax * 2) - 1 }, (_, index) => (index + 1) / 2);
+const tickPath = [
+  ...xTicks.map((x) => `M${plotX(x)} ${CONVOLUTION.baseline - 2.5}v5`),
+  ...yTicks.map((y) => `M${plotX(0) - 2.5} ${plotY(y)}h5`),
+].join('');
+---
+
+<call-convolution>
+  <figure>
+    <svg viewBox="0 0 720 274" role="img" aria-label="A fixed black call payout and a red Gaussian-smoothed call price. As expiry approaches, the red curve collapses onto the payout. Green and blue Gaussian kernels use a separate vertical density scale and remain centered at two fixed stock prices, with matching points on the red price curve.">
+      <defs>
+        <clipPath id="call-convolution-plot"><rect x={CONVOLUTION.left} y="0" width={CONVOLUTION.right - CONVOLUTION.left} height={CONVOLUTION.baseline + 5} /></clipPath>
+      </defs>
+      <path class="axis" d={`M${CONVOLUTION.left - 8} ${CONVOLUTION.baseline}H${CONVOLUTION.right + 8}M${plotX(0)} ${CONVOLUTION.baseline}V5`} />
+      <path class="axis" d={`M${CONVOLUTION.right + 3} ${CONVOLUTION.baseline - 3}l5 3-5 3M${plotX(0) - 3} 10l3-5 3 5${tickPath}`} />
+      <g clip-path="url(#call-convolution-plot)">
+        {evaluationPoints.map((mean, index) => {
+          const { contour, fill } = gaussianCurve(mean, CONVOLUTION.initialVariance);
+          return <g class:list={['kernel', index === 0 ? 'green' : 'blue']} data-kernel data-mean={mean}>
+            <path class="gaussian-fill" data-fill d={fill} />
+            <path class="gaussian-contour" data-contour d={contour} />
+            <circle class="center" cx={plotX(mean)} cy={CONVOLUTION.baseline} r="2.3" />
+          </g>;
+        })}
+        <path class="payoff" d={`M${plotX(CONVOLUTION.xMin)} ${plotY(0)}H${plotX(0)}L${plotX(CONVOLUTION.xMax)} ${plotY(CONVOLUTION.xMax)}`} />
+        <path class="price" data-price d={callCurve(CONVOLUTION.initialVariance)} />
+        {evaluationPoints.map((mean, index) => (
+          <g class:list={[index === 0 ? 'green' : 'blue']} data-marker data-mean={mean}>
+            <path class="guide" data-guide d={`M${plotX(mean)} ${CONVOLUTION.baseline}V${plotY(convolvedCall(mean, CONVOLUTION.initialVariance))}`} />
+            <circle class="price-point" data-point cx={plotX(mean)} cy={plotY(convolvedCall(mean, CONVOLUTION.initialVariance))} r="3.3" />
+          </g>
+        ))}
+      </g>
+    </svg>
+  </figure>
+</call-convolution>
+
+<style>
+  call-convolution { --convolution-green: #15803d; --convolution-blue: #1d6fd1; display: block; max-width: 680px; margin: 1rem auto; }
+  :global(html[data-theme='dark']) call-convolution { --convolution-green: #4ade80; --convolution-blue: #60a5fa; }
+  figure { margin: 0; }
+  svg { display: block; width: 100%; height: auto; }
+  path { fill: none; }
+  .axis { stroke: var(--foreground); stroke-opacity: 0.45; stroke-width: 0.8; stroke-linecap: round; stroke-linejoin: round; }
+  .green { color: var(--convolution-green); }
+  .blue { color: var(--convolution-blue); }
+  .gaussian-fill { fill: currentColor; fill-opacity: 0.12; }
+  .gaussian-contour { stroke: currentColor; stroke-width: 1.35; }
+  .payoff { stroke: var(--foreground); stroke-width: 2; stroke-linejoin: round; }
+  .price { stroke: var(--maroon); stroke-width: 1.65; }
+  .center { fill: currentColor; }
+  .guide { stroke: currentColor; stroke-opacity: 0.25; stroke-width: 0.8; stroke-dasharray: 2 3; }
+  .price-point { fill: currentColor; stroke: var(--background); stroke-width: 1; }
+</style>
+
+<script>
+  import { CONVOLUTION, callCurve, convolvedCall, gaussianCurve, plotX, plotY } from './call-convolution-model.mjs';
+
+  class CallConvolution extends HTMLElement {
+    private controller?: AbortController;
+    private observer?: IntersectionObserver;
+    private frame = 0;
+
+    connectedCallback() {
+      if (this.controller) return;
+      this.controller = new AbortController();
+      const { signal } = this.controller;
+      const motion = window.matchMedia?.('(prefers-reduced-motion: reduce)');
+      let playing = !motion?.matches;
+      let visible = !('IntersectionObserver' in window);
+      let progress = 0;
+      let hold = 0;
+      let lastStamp: number | null = null;
+      const price = this.querySelector<SVGPathElement>('[data-price]')!;
+      const kernels = Array.from(this.querySelectorAll<SVGGElement>('[data-kernel]'), (group) => ({
+        mean: Number(group.dataset.mean),
+        fill: group.querySelector<SVGPathElement>('[data-fill]')!,
+        contour: group.querySelector<SVGPathElement>('[data-contour]')!,
+      }));
+      const markers = Array.from(this.querySelectorAll<SVGGElement>('[data-marker]'), (group) => ({
+        mean: Number(group.dataset.mean),
+        point: group.querySelector<SVGCircleElement>('[data-point]')!,
+        guide: group.querySelector<SVGPathElement>('[data-guide]')!,
+      }));
+      const render = () => {
+        const variance = CONVOLUTION.initialVariance * (1 - progress) ** 2;
+        this.dataset.variance = variance.toFixed(6);
+        price.setAttribute('d', callCurve(variance));
+        kernels.forEach(({ mean, fill, contour }) => {
+          const paths = gaussianCurve(mean, variance);
+          fill.setAttribute('d', paths.fill);
+          contour.setAttribute('d', paths.contour);
+        });
+        markers.forEach(({ mean, point, guide }) => {
+          const y = plotY(convolvedCall(mean, variance));
+          point.setAttribute('cy', y.toFixed(3));
+          guide.setAttribute('d', `M${plotX(mean)} ${CONVOLUTION.baseline}V${y.toFixed(3)}`);
+        });
+      };
+      const stop = () => { cancelAnimationFrame(this.frame); this.frame = 0; lastStamp = null; };
+      const tick = (stamp: number) => {
+        this.frame = 0;
+        if (!playing || !visible || document.hidden) { lastStamp = null; return; }
+        if (lastStamp !== null) {
+          const elapsed = Math.min((stamp - lastStamp) / 1000, 0.1);
+          if (progress < 1) progress = Math.min(1, progress + elapsed / 10);
+          else { hold += elapsed; if (hold >= 1.2) { progress = 0; hold = 0; } }
+        }
+        lastStamp = stamp;
+        render();
+        this.frame = requestAnimationFrame(tick);
+      };
+      const sync = () => {
+        stop(); render();
+        if (playing && visible && !document.hidden) this.frame = requestAnimationFrame(tick);
+      };
+      document.addEventListener('visibilitychange', sync, { signal });
+      motion?.addEventListener('change', () => { playing = !motion.matches; sync(); }, { signal });
+      if ('IntersectionObserver' in window) {
+        this.observer = new IntersectionObserver(([entry]) => { visible = entry.isIntersecting; sync(); }, { threshold: 0.05 });
+        this.observer.observe(this);
+      }
+      sync();
+    }
+
+    disconnectedCallback() {
+      this.controller?.abort(); this.controller = undefined;
+      this.observer?.disconnect(); this.observer = undefined;
+      cancelAnimationFrame(this.frame); this.frame = 0;
+    }
+  }
+  if (!customElements.get('call-convolution')) customElements.define('call-convolution', CallConvolution);
+</script>

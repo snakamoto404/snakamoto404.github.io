@@ -1,5 +1,5 @@
 ---
-title: "Options, heat diffusion, and quantum mechanics!"
+title: "Why does options price undergo heat-diffusion in reverse-time?"
 date: 2026-08-07
 summary: "Writeup and notes of a Jane Street summer intern class that I tought in 2026. Compresses intuitions on risk-neutral options pricing, heat-diffusion, and (free-particle) quantum mechanics."
 ---
@@ -7,19 +7,23 @@ summary: "Writeup and notes of a Jane Street summer intern class that I tought i
 import Plot from '../../../components/Plot.astro';
 import BachelierQuadrants from './options-heat-diffusion-artifacts/BachelierQuadrants.astro';
 import RiskNeutralPricing from './options-heat-diffusion-artifacts/RiskNeutralPricing.astro';
+import RiskNeutralMeasure from './options-heat-diffusion-artifacts/RiskNeutralMeasure.astro';
+import BinomialPricing from './options-heat-diffusion-artifacts/BinomialPricing.astro';
+import BinomialContinuum from './options-heat-diffusion-artifacts/BinomialContinuum.astro';
+import BrownianComparison from './options-heat-diffusion-artifacts/BrownianComparison.astro';
+import CallConvolution from './options-heat-diffusion-artifacts/CallConvolution.astro';
+import HeatCurvature from './options-heat-diffusion-artifacts/HeatCurvature.astro';
+import LocalArbitrage from './options-heat-diffusion-artifacts/LocalArbitrage.astro';
 
-Here are several seemingly very disjoint, but equally fun, topics.
-I was vaguely aware that each topic had highly nontrivial things to say, and also were somehow connected with each other. The original motivation for this class (and post) was to clearly understand the interplays.
+Risk-neutral pricing, diffusion, and quantum mechanics are deep but disjoint topics.
 
-Tl; dr of interesting claims:
+Each topic had highly nontrivial things to say, and I was vaguely aware of them being somehow connected with each other. The original motivation for the Jane Street intern class, and this post, was to clearly understand the interplays. Tl; dr of interesting claims:
 1. The <span class="maroon">**risk-neutral measure $\mathbb Q(s)$ is fundamentally "how much is a future dollar in scenario $s$ worth today"?**</span>
-    - Then of course the risk-neutral measure $\mathbb Q$ is "down-tilted" compared to real-world $\mathbb P$.
 2. By induction on a single-step binary stump, we can price options along a discrete binary tree via **risk-neutral arbitrage**.
 3. The heat diffusion equation is ~energy mass smearing along microscopic Brownian motion.
-4. **Feynmann-Kac**, a <span class="maroon">pairing between *local stochastic differential equation* and *global expectation along a measure*</span>. We introduce this duality by taking the continuum limit of options pricing via two "local" and "global" approaches.
-5. The options highlight is that <span class="maroon">**options price evolve as "heat-diffusion" in reverse-time**</span>.
-5. This duality also shows up as **Schrodinger equation $\leftrightarrow$ Feynmann path integral** in free-particle quantum mechanics, along an imaginary time-rotation.
-
+4. Taking the continuum (Brownian) limit of trees, we clarify how <span class="maroon">**options price evolve as "heat-diffusion" in reverse-time**</span>.
+4. The equivalence between options pricing via two "local" and "global" approaches is a special case of **Feynman-Kac**, which describes a <span class="maroon">pairing between *local stochastic differential equation* and *global expectation along a measure*</span>.
+5. This local-generator v. global-measure duality also shows up as **Schrodinger equation $\leftrightarrow$ Feynman path integral** in free-particle quantum mechanics via an imaginary time-rotation.
 <BachelierQuadrants />
 
 <details>
@@ -27,19 +31,19 @@ Tl; dr of interesting claims:
 
 The two plots against time show two random stock trajectories (lower) and their corresponding call-option price struck at the initial price.
 
-In the blue trajectory, as the stock price goes below the strike as time goes on, the options price collapses to zero.
+In the <span class="text-blue-700 dark:text-blue-400">blue trajectory</span>, as the stock price goes below the strike as time goes on, the options price collapses to zero.
 
-In the green trajectory, the stock price finishes above the strike and the options price comes to model the stock price itself.
+In the <span class="text-green-700 dark:text-green-400">green trajectory</span>, the stock price finishes above the strike and the options price comes to model the stock price itself.
 
 The evolving curve of options v. stock-price at time $t$ evolves according to the heat equation in reverse-time, where the options-price axis is replaced with "temperature" and the stock-price axis is replaced with position along a heated rod.
 
 </details>
 
-## Risk-neutral options pricing
+## Discrete options pricing
 
 We begin with the core intuition of **pricing via arbitrage**.
 
-### Pricing a call stump
+### Pricing a call on a stump
 
 Consider a <strong class="text-green-700 dark:text-green-400">strike-100 call</strong> on Starbucks (SBUX), whose stock is worth \$100 today. Tomorrow, SBUX goes to \$90 or \$120.
 
@@ -53,7 +57,7 @@ From an expectation standpoint, the <strong class="text-green-700 dark:text-gree
 
 To see this, consider the following construction. The "no matter how the underlying moves" part is where the name "risk-neutral" comes from.
 
-:::proposition[replicating portfolio]
+:::proposition[replicating portfolio]{#prp-replicating-portfolio}
 A <strong class="text-[#765298] dark:text-[#c0a1d2]">replicating portfolio</strong> of (2/3 SBUX share and -\$60 cash) exactly replicates the <strong class="text-green-700 dark:text-green-400">strike-100 call</strong>'s payout in both cases, <strong class="maroon">no matter whether SBUX goes up or down</strong>
 
 <details>
@@ -77,21 +81,229 @@ Pricing a stump is **independent of the real-world measure $\mathbb P$**.
 The crux of arbitrage pricing a derivative is constructing a replicating portfolio that replicates *payout in all cases*
 :::
 
-### Generalizing: risk-neutral measure
+### Forshadowing the risk-neutral measure
 
 We introduce $\mathbb Q$ by looking at two more derivatives:
-0. A strike-100 call [green bold]
-1. A strike-100 future [dark orange bold]
-2. A strike-110 put [dark red bold]
+1. A <strong class="text-green-700 dark:text-green-400">strike-100 call</strong>
+2. A <strong class="text-[#c27618] dark:text-[#f2b35f]">strike-100 future</strong>
+3. A <strong class="text-[#9a3642] dark:text-[#d9909a]">strike-110 put</strong>
 
-Work through the same math to find the payouts
-[slide description]
-Again, minimal slide, starting from the 100 -> 120 / 90 p and \bar p branches.
-Next, per each, show the strike-100 call / ??? / 20 ... for each subsequent derivative. First do ??? for each. The layout should be, corresponding-color background three ??? things below the $100, and then a center-aligned (text) rectangle to the left showing the names 100-call, 100-fut, 110-put, and the 120 / 90 should show the corresponding payouts below them.
+It's not too hard to work out the replicating portfolios using similar construction in :ref[prp-replicating-portfolio] and their [fair price](#risk-neutral-measure--probabilities).
+<RiskNeutralMeasure>
+  <span slot="up-probability">$p$</span>
+  <span slot="down-probability">$\bar p$</span>
+  <span slot="up-risk-neutral">$q=1/3$</span>
+  <span slot="down-risk-neutral">$\bar q=2/3$</span>
+  <span slot="call-portfolio">100-call: (2/3 SBUX, -\$60 cash)<br />$V=(2/3)\cdot100-60=20/3$</span>
+  <span slot="future-portfolio">100-fut: (1 SBUX, -\$100 cash)<br />$V=100-100=0$</span>
+  <span slot="put-portfolio">110-put: (-2/3 SBUX, \$80 cash)<br />$V=(-2/3)\cdot100+80=40/3$</span>
+</RiskNeutralMeasure>
 
-Three clicks, one click shows one extra derivative's payout, name, and ???.
+Is it really a coincidence that the fair derivative value today is a linear combination of future payouts according to $q=1/3$ and its complement?
 
-On the right, in 2*2, we'll show the payout graphs of each, the bottom-right panel should be left for the up and down dollars [to be specified later]
+Well, not really: consider two basis-vector like constructions
+- An <strong class="text-[#777b3c] dark:text-[#c0c582]">up-dollar</strong> which pays \$1 when SBUX goes to \$120.
+- A <strong class="text-[#a65a60] dark:text-[#dca0a5]">down-dollar</strong> which pays \$1 only when SBUX goes to \$90.
 
-This animation should be on the left. Leave space as we're gonna make for an \uparrow dollar (muted olive) and a \downarrow dollar (muted red)
-[end]
+Treating them as derivatives, [their fair value work out to](#risk-neutral-measure--state-dollar-portfolios) $q=1/3$ and $\bar q=2/3$, respectively. We'll show later that them being nonnegative and adding up to 1 is not a coincidence.
+:::proposition[linear combination]{#prp-linear-combination}
+Given any derivative in the setting above defined by payouts $V_{t+1}(\uparrow)$ and $V_{t+1}(\downarrow)$, its fair value today is
+$$
+\begin{aligned}
+  V_t &= V_{t+1}(\uparrow) \cdot \operatorname{fair}(\text{up-dollar}) + V_{t+1}(\downarrow) \cdot \operatorname{fair}(\text{down-dollar}).
+\end{aligned}
+$$
+:::
+
+### From stumps to binomial trees
+
+We intuit the Fundamental Theorem of Asset Pricing (FTAP) by considering a two-step setup:
+1. At $t=0$, stock price is 100
+2. For each consecutive time, the stock price could jiggle up or down by \$1.
+
+How to price a <strong class="text-green-700 dark:text-green-400">$t+2$ strike-100 call</strong>?
+
+<BinomialPricing />
+
+Well, we know how to price stumps! The tree's made up of [binomial stumps which have local](#binomial-pricing--base-stump) $q = 1/2$, i.e. fair at $t$ is just the average of fairs at $t+1$.
+
+Already, here're two ways to price at $t=0$, they sound trivially the same now, but correspond to the two faces of Feynmann-Kac when we go to the continuum limit:
+1. **Local back-induction**: work out fairs at $t$ from known fairs / payouts at $t+1$ using no-arbitrage conditions.
+2. **Global expectation**: recognizing the independent product of tree units with $q=1/2$, price $V_0 = \mathbb E_{\mathbb Q}[V_2]$ via
+$$
+  \mathbb Q(\uparrow \uparrow) = \mathbb Q(\uparrow \downarrow) = \mathbb Q(\downarrow \uparrow) = \mathbb Q(\downarrow \downarrow) = (1/2)^2 = 1/4
+$$
+
+Both methods extend to $n$-step binomial trees.
+More generally, in the tree case, $\uparrow$ and $\downarrow$ will be generalized to $s \in S = \{\uparrow \uparrow \uparrow \dots, \dots, \uparrow \uparrow \downarrow, \dots, \downarrow \downarrow \downarrow \dots\}$, but it's not hard to convince ourselves of the following:
+
+:::theorem[fundamental theorem of asset pricing; risk-neutral measure]
+Define $\mathbb Q(s\in S) = \mathrm{fair}(s)$, the arbitrage fair value of a scenario-$s$ dollar, a basis derivative which pays out 1 under trajectory $s$ and $0$ otherwise. The set of values $\{\mathbb Q(s)\}$ satisfies:
+
+1. $\mathbb Q(s) \geq 0$, because a probabilistic-dollar tomorrow cannot be worth negative today.
+2. $\sum_s \mathbb Q(s) = 1$, because one guaranteed dollar tomorrow is worth the same today.
+
+In other words, <span class="maroon">**$\mathbb Q$ is a valid probability measure**</span>. This is the risk-neutral measure.
+:::
+
+:::proposition[arbitrage pricing under the risk-neutral measure]
+[:ref[prp-linear-combination]](#prp-linear-combination) can be generalized to $V_t = \mathbb E_{s\sim \mathbb Q}V_T(s)$, where $V_T(s)$ is the payout under scenario $s$.
+
+Generalizing this yields the slogan "derivative fair value is a martingale under the risk-neutral measure $\mathbb Q$".
+:::
+
+## To the continuum
+
+### Proper limit of binomial trees: Brownian process.
+
+The binomial stump $k \to k\pm 1$ is a "coarse-grained" description of a process that's finer in both price and time granularity.
+
+The key design question is: **what property do we want to keep invariant across scaling**?
+
+A naive two-step binomial tree has $\mathrm{Var}=2$ across $t=2$, and a $n$-step binomial tree has $\mathrm{Var}=n$ across $t=n$.
+<BinomialContinuum />
+
+{/*
+[slide: showing n=1, n=2, n=3, n=4, and then n; should be divided to the left and right panels. The left panel shows a tree (just dots & lines work, vertices can be shared) branching left to right with annotation of top with +1 / +2 / +3 / +n, and bottom -1 / -2 / -3 / -n, and right a rotated histogram of marginal probabilities across the bins, with a overlaid gaussian pdf; the right should show the same, but with interval \sqrt n instead; the left vertex should show the interval; no slop at all please. Change to comment once figure is added.]
+*/}
+
+To get a meaningful "fine-grained continuous limit" of the binomial stump with $\mathrm{Var}=1$ across $t=1$, we take a $n$-step tree and:
+- Rescale time interval from $1$ to $\Delta t = 1/n$.
+- Rescale value variation from $1$ to $\Delta P = \sqrt{1/n}$.
+
+The limit of this rescaling is the Brownian (Weiner) process.
+Its key properties are **Gaussian marginal** and **independent increments** ([see previous post](/blogs/machine-learning/ot-generative-3-diffusion/#brownian-motion-as-score-flow)); in fact, these are also sufficient properties to pin down the Brownian process.
+$$
+  (x_T \mid \mathbb Q, x_0) \sim \mathcal N(x_0, T)
+$$
+Intuitively, the Brownian process describes particles undergoing random "jiggles." The macroscopic behavior is them smearing out according to Gaussian averaging.
+<BrownianComparison />
+
+{/*
+[three-panel animation below]
+[left]
+a simple figure-plot showing an initial Gaussian pdf and balls along each x-position with height corresponding to the pdf; throughout time, the balls undergo random walk, we trace the "expected" pdf as well as the moving of the balls themselves
+[middle]
+a plot in centered perspective; on the near end, a more concentrated Gaussian (normalize for height so that height on near & far ends are the same), an on the far-out end, a smeared-out Gaussian.
+Throughout time, we trace particles which undergo random walk, we should show the pdf at the section, as well as the points themselves, and the "floor" should show the persisted trajectories of the particles. There should be many points (just have slightly higher transparency on their trajectories)
+[right]
+Same as middle, but instead we show their evolution according to a deterministic score flow.
+*/}
+
+- left and middle figures show how particles undergoing random walk macroscopically smears out; this is just CLT in motion.
+- middle and right figures shows how such a microscopically stochastic, but macroscopically deterministic, behavior can be [replicated by a microscopically deterministic process](/blogs/machine-learning/ot-generative-3-diffusion/#brownian-motion-as-score-flow).
+
+### Global measure perspective on options pricing
+
+Under the simple binomial-tree-limit model (Brownian process), the fair value at time $t$ is just the expectation of the final payout $V_T$ under the risk-neutral measure $\mathbb Q$
+$$
+  V_t(x_t) = \mathbb E_{x_T\sim \mathbb Q\mid x_t} V_T(x_T)
+$$
+But we know that $\mathbb Q$ is just Brownian, and so the marginal is Gaussian!
+
+:::proposition[derivative pricing in the Bachelier model]
+Under a simplified stock model where:
+1. For each $\Delta t = 1/n$, the stock could move up or down by $\sqrt{1/n}$.
+2. Take the limit $n\to \infty$.
+
+Given any derivative with payouts $V_T(x_T)$, its arbitrage-enforced fair price at time $t$, given stock price $x$, given by the "smeared out" payout $V_T\ast \mathcal N(0, t)$.
+$$
+  V_t(x) = \mathbb E_{x_T\sim \mathcal N(0, t)} V_T(x_T) = \left[
+    V_T\ast \mathcal N(x, t)
+  \right](x)
+$$
+Note that, again, we didn't specify or depend on the real-world stock measure $\mathbb P$!
+
+(somewhat abusing the pdf notations here; we're also putting everything in natural units and ignoring interest rates).
+:::
+
+In the particular case of call options with **payout** $V_T(x) = (x-s)_+$, graphically the <strong class="maroon">fair price</strong> at two sample <strong class="text-green-700 dark:text-green-400">out-of-money</strong> and <strong class="text-[#1d6fd1] dark:text-[#60a5fa]">in-the-money</strong> points look like:
+<CallConvolution />
+
+{/*
+[animation]
+shows a simple no-number-anywhere x-axis and y-axis with tick markers; no grid background. The constant stuff are (1) a relu in solid black denoting the final payout, a collapsing red curve denoting the convolved payout (payout at current time), and two constant points at x=-1.5 and x=2, centered Gaussians pdf's (it's ok for height at late-time t to be outside the y-boundary; people will know), with green & blue pdf contour and more transparent filling; mark the corresponding points on the red curve.
+*/}
+
+### Quick detour on the heat equation
+
+This jiggling-smearing picture also featured prominently when physicists started to study heat. Intuitively, heat conduction has the following properties:
+- If neighbors are warmer $\implies$ get warm.
+- If neighbors are cooler $\implies$ get cool.
+- If neighbors are equally warm / cool $\implies$ stay.
+
+The **simplest mathematical formalization** of this intuition turns out to be the heat equation
+$$
+  \pd t u = \df 1 2 \pd x^2 u \equiv \df 1 2 \nabla^2 u
+$$
+<HeatCurvature />
+
+{/*
+[three-panel animation without dividers below, left shows up-curving parabola with $\dot u \propto \nabla^2 u > 0, middle shows three straight lines all with $\nabla^2 u = 0$, and right shows downward parabola with $\nabla^2 < 0$. Only need to show the \dot u propto for the middle plot]
+*/}
+
+:::proposition[interpretation of the heat equation]
+The macroscopic behavior described by the heat equation can be induced if we interpret "little irreducible packets of energy (heat)" undegoing random Brownian-motion jiggling. Under the [equivalence with score flow](/blogs/machine-learning/ot-generative-3-diffusion/#brownian-motion-as-score-flow)
+$$
+  dX_t = dW_t \cong dX_t = \left(-\df 1 2 \nabla \log \rho\right) dt
+$$
+Combining with the local continuity equation $\pd t \rho + \nabla \cdot (\rho v) = 0$ yields the heat equation
+$$
+  \pd t \rho = -\nabla \cdot (\rho v) = -\df 1 2 \nabla \cdot (\rho \nabla \log \rho) = \df 1 2 \nabla^2 \rho
+$$
+:::
+
+### Local arbitrage perspective and the heart of Black-Scholes
+
+This is the crux of the continuous-limit options pricing narrative.
+We take the continuous limit of the "backward induction" pricing perspective and demonstrate equivalence with reverse-time heat diffusion. Begin by defining some quantities:
+- **Initial condition** denote the terminal derivative payout given terminal stock price $p$ by $V_T(p)$
+- Let $V_{p, t}$ denote the derivative's fair price at time $t$ given current price $p$.
+- Our argument concerns a replicating portfolio consisting of stock and cash; let $S_{p, t}$ denote the amount of stock in the replicating portfolio.
+
+<LocalArbitrage />
+
+{/*
+[binomial branch showing $p / V_{p, t} -> (p+dp / V_{p+dp, t+dt} and c.c.)]
+*/}
+
+:::proposition[risk-neutral condition determines $S$ in terms of $V$]
+The definition of a risk-neutral portfolio is that locally, the variation in its payout must offset that of the underlying stock move.
+This means that stock ownership must exactly "hedge" the payout variation.
+$$
+  \Delta V_{p, t} \equiv V_{p+dp} - V_{p-dp} = S\cdot 2\, dp
+$$
+Taking the continuous limit of the finite difference yields
+$$
+  S = \pd p V
+$$
+:::
+This explain, as a collary, **the options delta $\pd p V$ is the amount of stock in the arbitrage portfolio**.
+
+## Extensions
+
+### Bells and whistles, and the full Black-Scholes
+
+So far, we've done simplifications to focus on the "crux" of the problem, as physicists do.
+
+Starting from the additive-volatility Bachelier model on the left, we derived the reverse-time heat equation on the right:
+$$
+  dP_t = dW_t \implies \pd t V + \df 1 2 \nabla^2 V = 0
+$$
+
+1. If we _explicitly restore volatility_ (diffusion constant):
+$$
+  dP_t = \sigma\, dW_t \implies \pd t V + \df {\sigma^2}{2} \nabla^2 V = 0
+$$
+2. Add back interest rate discounting: 1 dollar today is worth $e^{rt}$ time $t$ from now; this shows up as a price-dependent drift term in the dynamics on the left
+$$
+  dP_t = rP_t\, dt + \sigma\, dW_t \implies \pd t V + rp\pd p V + \df{\sigma^2}{2} \nabla^2 V - rV = 0
+$$
+3. Use geomtric, instead of additive, Brownian motion.
+$$
+  dP_t = rP_t\, dt + \sigma P_t\, dW_t \implies \pd t V + rp\pd p V + \df{\sigma^2p^2}{2} \nabla^2 V - rV = 0
+$$
+
+Now, there's a clear view of the Nobel-prize winning equation with clear attribution from where each term comes from.
+
+### Free-particle quantum mechanics

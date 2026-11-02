@@ -1,0 +1,155 @@
+---
+import { renderMathLabels } from './figure-math.mjs';
+
+const counts = [1, 2, 3, 4, 16];
+const centerY = 130;
+const treeStart = 16;
+const treeEnd = 222;
+const histogramStart = 294;
+const densityScale = 250;
+const panels = [
+  { normalized: false, variance: '\\mathrm{Var}=n' },
+  { normalized: true, variance: '\\mathrm{Var}=1' },
+].map((panel) => {
+  const [varianceLabel] = renderMathLabels([panel.variance]);
+  const frames = counts.map((n, frameIndex) => {
+    const step = panel.normalized ? 1 / Math.sqrt(n) : 1;
+    const domain = (n + 1) * step;
+    const yScale = 122 / domain;
+    const variance = n * step * step;
+    const x = (time) => treeStart + (treeEnd - treeStart) * time / n;
+    const y = (position) => centerY - position * step * yScale;
+    const vertices = [];
+    const edges = [];
+    for (let time = 0; time <= n; time++) {
+      for (let up = 0; up <= time; up++) {
+        const position = 2 * up - time;
+        vertices.push({ x: x(time), y: y(position) });
+        if (time < n) {
+          edges.push({ x1: x(time), y1: y(position), x2: x(time + 1), y2: y(position + 1) });
+          edges.push({ x1: x(time), y1: y(position), x2: x(time + 1), y2: y(position - 1) });
+        }
+      }
+    }
+    const probabilities = [];
+    let probability = 2 ** -n;
+    for (let up = 0; up <= n; up++) {
+      probabilities.push(probability);
+      probability *= (n - up) / (up + 1);
+    }
+    // The lattice spacing is 2Δx. Divide mass by this bin width so the
+    // histogram and the Gaussian PDF share density units and unit area.
+    const binWidth = 2 * step;
+    const bars = probabilities.map((mass, up) => ({
+      x: histogramStart,
+      y: y(2 * up - n) - binWidth * yScale / 2,
+      width: mass / binWidth * densityScale,
+      height: binWidth * yScale,
+      mass,
+    }));
+    const gaussian = Array.from({ length: 241 }, (_, index) => {
+      const value = domain * (1 - 2 * index / 240);
+      const density = Math.exp(-value * value / (2 * variance)) / Math.sqrt(2 * Math.PI * variance);
+      return `${index === 0 ? 'M' : 'L'}${(histogramStart + density * densityScale).toFixed(3)} ${(centerY - value * yScale).toFixed(3)}`;
+    }).join(' ');
+    const symbolic = frameIndex === counts.length - 1;
+    const extent = symbolic ? 'n' : String(n);
+    const bound = panel.normalized && n > 1 ? `\\sqrt{${extent}}` : extent;
+    const [upperLabel, lowerLabel] = renderMathLabels([`+${bound}`, `-${bound}`]);
+    return { n, step, variance, vertices, edges, bars, gaussian, upperLabel, lowerLabel, upperY: y(n) - 11, lowerY: y(-n) - 11 };
+  });
+  return { ...panel, varianceLabel, frames };
+});
+---
+
+<binomial-continuum data-frame-count={counts.length}>
+  <figure>
+    <div class="panels">
+      {panels.map(({ normalized, varianceLabel, frames }) => (
+        <svg class:list={['continuum-panel', normalized ? 'normalized' : 'unscaled']} viewBox="0 0 400 260" role="img" aria-label={normalized
+          ? 'Binomial tree with steps 1 over square root of n and terminal variance 1. Blue histogram shows terminal density; green curve is the standard Gaussian density.'
+          : 'Binomial tree with unit steps and terminal variance n. Blue histogram shows terminal density; green curve is the Gaussian density with variance n.'}>
+          <path class="density-axis" d="M294 8V252" />
+          {frames.map(({ n, step, variance, vertices, edges, bars, gaussian, upperLabel, lowerLabel, upperY, lowerY }, index) => (
+            <g class="frame" data-frame={index} data-n={n} data-step-size={step} data-variance={variance} aria-hidden={index !== 0 ? 'true' : 'false'}>
+              <g class="edges">{edges.map((edge) => <line {...edge} />)}</g>
+              <g class="vertices">{vertices.map(({ x, y }) => <circle cx={x} cy={y} r={n > 4 ? 1.2 : 1.8} />)}</g>
+              <g class="histogram">{bars.map(({ mass, ...bar }) => <rect {...bar} data-mass={mass} />)}</g>
+              <path class="gaussian" d={gaussian} />
+              <foreignObject x="20" y={upperY - 1} width="160" height="24">
+                <div class="math-label heading" xmlns="http://www.w3.org/1999/xhtml" set:html={varianceLabel} />
+              </foreignObject>
+              <foreignObject x="226" y={upperY} width="64" height="22">
+                <div class="math-label bound" xmlns="http://www.w3.org/1999/xhtml" set:html={upperLabel} />
+              </foreignObject>
+              <foreignObject x="226" y={lowerY} width="64" height="22">
+                <div class="math-label bound" xmlns="http://www.w3.org/1999/xhtml" set:html={lowerLabel} />
+              </foreignObject>
+            </g>
+          ))}
+        </svg>
+      ))}
+    </div>
+    <div class="controls" hidden>
+      <button type="button" data-direction="-1" aria-label="Previous slide">←</button>
+      <button type="button" data-direction="1" aria-label="Next slide">→</button>
+    </div>
+  </figure>
+</binomial-continuum>
+
+<style>
+  binomial-continuum { --continuum-blue: #1d6fd1; --continuum-green: #15803d; display: block; margin: 1rem 0; }
+  :global(html[data-theme='dark']) binomial-continuum { --continuum-blue: #60a5fa; --continuum-green: #4ade80; }
+  figure { margin: 0; }
+  .panels { position: relative; display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .panels::after { content: ''; position: absolute; inset-block: 0; left: 50%; border-left: 1px solid var(--border); pointer-events: none; }
+  svg { display: block; width: 100%; height: auto; }
+  .edges line { stroke: var(--foreground); stroke-opacity: 0.22; stroke-width: 0.8; }
+  .vertices circle { fill: var(--continuum-blue); }
+  .histogram rect { fill: var(--continuum-blue); fill-opacity: 0.18; stroke: none; }
+  .gaussian { fill: none; stroke: var(--continuum-green); stroke-width: 1.4; }
+  .density-axis { fill: none; stroke: var(--foreground); stroke-opacity: 0.25; }
+  .math-label { display: grid; place-items: center; height: 100%; line-height: 1; color: var(--foreground); }
+  .heading { font-size: 15px; }
+  .bound { font-size: 13px; }
+  .frame[aria-hidden='true'] { display: none; }
+  .controls { display: flex; align-items: center; justify-content: flex-end; gap: 0.25rem; margin-top: 0.25rem; }
+  .controls[hidden] { display: none; }
+  button { width: 28px; height: 28px; padding: 0; border: 0; background: transparent; color: var(--foreground); font: inherit; font-size: 20px; }
+  button:disabled { opacity: 0.2; }
+  @media (max-width: 540px) {
+    binomial-continuum { overflow-x: auto; }
+    figure { min-width: 540px; }
+  }
+</style>
+
+<script>
+  class BinomialContinuum extends HTMLElement {
+    private controller?: AbortController;
+
+    connectedCallback() {
+      if (this.controller) return;
+      this.controller = new AbortController();
+      const { signal } = this.controller;
+      const frames = this.querySelectorAll<SVGGElement>('[data-frame]');
+      const stepCount = Number(this.dataset.frameCount);
+      const buttons = this.querySelectorAll<HTMLButtonElement>('button');
+      let step = 0;
+      const render = () => {
+        this.dataset.step = String(step);
+        frames.forEach((frame) => frame.setAttribute('aria-hidden', String(Number(frame.dataset.frame) !== step)));
+        buttons[0].disabled = step === 0;
+        buttons[1].disabled = step === stepCount - 1;
+      };
+      buttons.forEach((button) => button.addEventListener('click', () => {
+        step = Math.max(0, Math.min(stepCount - 1, step + Number(button.dataset.direction)));
+        render();
+      }, { signal }));
+      render();
+      this.querySelector<HTMLElement>('.controls')!.hidden = false;
+    }
+
+    disconnectedCallback() { this.controller?.abort(); this.controller = undefined; }
+  }
+  if (!customElements.get('binomial-continuum')) customElements.define('binomial-continuum', BinomialContinuum);
+</script>

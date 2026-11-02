@@ -1,0 +1,106 @@
+---
+import { renderMathLabels } from './figure-math.mjs';
+import { CURVATURE, heatCurve, heatPoint, heatValue } from './heat-curvature-model.mjs';
+const labels = renderMathLabels(['\\nabla^2u>0', '\\dot u\\propto\\nabla^2u=0', '\\nabla^2u<0']);
+const straightLines = [{ slope: -0.15, intercept: 0.45 }, { slope: 0, intercept: 0.9 }, { slope: 0.15, intercept: 1.35 }].map(({ slope, intercept }) => {
+  const start = heatPoint(CURVATURE.xMin, slope * CURVATURE.xMin + intercept);
+  const end = heatPoint(CURVATURE.xMax, slope * CURVATURE.xMax + intercept);
+  return `M${start.x} ${start.y}L${end.x} ${end.y}`;
+});
+---
+
+<heat-curvature>
+  <figure>
+    <svg viewBox="0 0 600 128" role="img" aria-label="Positive curvature warms: a convex parabola rises. Zero curvature stays unchanged: three straight lines remain still. Negative curvature cools: a concave parabola falls. Each evolving curve satisfies the heat equation.">
+      {['warming', 'neutral', 'cooling'].map((kind, index) => (
+        <g class={kind} transform={`translate(${index * 200} 0)`}>
+          <path class="axis" d="M20 92H180" />
+          {kind === 'neutral' ? straightLines.map((d) => <path class="profile" d={d} />) : <>
+            <path class="profile" data-curve={kind} d={heatCurve(kind, 0)} />
+            <circle data-temperature={kind} cx="100" cy={heatPoint(0, heatValue(kind, 0, 0)).y} r="2.2" />
+          </>}
+          <foreignObject x="0" y="102" width="200" height="22">
+            <div class="math-label" xmlns="http://www.w3.org/1999/xhtml" set:html={labels[index]} />
+          </foreignObject>
+        </g>
+      ))}
+    </svg>
+  </figure>
+</heat-curvature>
+
+<style>
+  heat-curvature { --curvature-blue: #1d6fd1; display: block; max-width: 600px; margin: 0.75rem auto; }
+  :global(html[data-theme='dark']) heat-curvature { --curvature-blue: #60a5fa; }
+  figure { margin: 0; }
+  svg { display: block; width: 100%; height: auto; }
+  .warming { color: var(--maroon); }
+  .neutral { color: var(--foreground); }
+  .cooling { color: var(--curvature-blue); }
+  path { fill: none; }
+  .axis { stroke: var(--foreground); stroke-opacity: 0.2; stroke-width: 0.7; }
+  .profile { stroke: currentColor; stroke-width: 1.6; stroke-linecap: round; }
+  .neutral .profile { stroke-opacity: 0.7; stroke-width: 1.3; }
+  circle { fill: currentColor; stroke: var(--background); stroke-width: 0.7; }
+  .math-label { display: grid; place-items: center; height: 100%; font-size: 13px; line-height: 1; }
+  @media (max-width: 480px) {
+    heat-curvature { overflow-x: auto; }
+    svg { min-width: 480px; }
+  }
+</style>
+
+<script>
+  import { heatCurve, heatPoint, heatValue } from './heat-curvature-model.mjs';
+
+  class HeatCurvature extends HTMLElement {
+    private controller?: AbortController;
+    private observer?: IntersectionObserver;
+    private frame = 0;
+
+    connectedCallback() {
+      if (this.controller) return;
+      this.controller = new AbortController();
+      const { signal } = this.controller;
+      const motion = window.matchMedia?.('(prefers-reduced-motion: reduce)');
+      let playing = !motion?.matches;
+      let visible = !('IntersectionObserver' in window);
+      let time = 0;
+      let hold = 0;
+      let lastStamp: number | null = null;
+      const curves = this.querySelectorAll<SVGPathElement>('[data-curve]');
+      const points = this.querySelectorAll<SVGCircleElement>('[data-temperature]');
+      const render = () => {
+        this.dataset.time = time.toFixed(4);
+        curves.forEach((curve) => curve.setAttribute('d', heatCurve(curve.dataset.curve, time)));
+        points.forEach((point) => point.setAttribute('cy', String(heatPoint(0, heatValue(point.dataset.temperature, 0, time)).y)));
+      };
+      const stop = () => { cancelAnimationFrame(this.frame); this.frame = 0; lastStamp = null; };
+      const tick = (stamp: number) => {
+        this.frame = 0;
+        if (!playing || !visible || document.hidden) { lastStamp = null; return; }
+        if (lastStamp !== null) {
+          const elapsed = Math.min((stamp - lastStamp) / 1000, 0.1);
+          if (time < 1) time = Math.min(1, time + elapsed / 4);
+          else { hold += elapsed; if (hold >= 1) { time = 0; hold = 0; } }
+        }
+        lastStamp = stamp;
+        render();
+        this.frame = requestAnimationFrame(tick);
+      };
+      const sync = () => { stop(); render(); if (playing && visible && !document.hidden) this.frame = requestAnimationFrame(tick); };
+      document.addEventListener('visibilitychange', sync, { signal });
+      motion?.addEventListener('change', () => { playing = !motion.matches; sync(); }, { signal });
+      if ('IntersectionObserver' in window) {
+        this.observer = new IntersectionObserver(([entry]) => { visible = entry.isIntersecting; sync(); }, { threshold: 0.05 });
+        this.observer.observe(this);
+      }
+      sync();
+    }
+
+    disconnectedCallback() {
+      this.controller?.abort(); this.controller = undefined;
+      this.observer?.disconnect(); this.observer = undefined;
+      cancelAnimationFrame(this.frame); this.frame = 0;
+    }
+  }
+  if (!customElements.get('heat-curvature')) customElements.define('heat-curvature', HeatCurvature);
+</script>
