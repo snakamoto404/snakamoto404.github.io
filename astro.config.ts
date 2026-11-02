@@ -1,5 +1,6 @@
 import { defineConfig } from 'astro/config';
 import sitemap from '@astrojs/sitemap';
+import mdx from '@astrojs/mdx';
 import tailwindcss from '@tailwindcss/vite';
 import remarkMath from 'remark-math';
 import rehypeSlug from 'rehype-slug';
@@ -11,6 +12,7 @@ export default defineConfig({
   site: 'https://snakamoto404.github.io',
   output: 'static',
   integrations: [
+    mdx(),
     sitemap({
       filter: (page) => {
         const pathname = new URL(page).pathname;

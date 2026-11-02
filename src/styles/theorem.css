@@ -48,6 +48,39 @@
   @apply font-normal;
 }
 
+.theorem-env--proof > summary.theorem-env__head {
+  @apply relative mb-0 cursor-pointer list-none rounded-sm py-0.5 pl-5 select-none;
+}
+
+.theorem-env--proof > summary.theorem-env__head::-webkit-details-marker {
+  display: none;
+}
+
+.theorem-env--proof > summary.theorem-env__head::marker {
+  content: "";
+}
+
+.theorem-env--proof > summary.theorem-env__head::before {
+  content: "";
+  @apply absolute top-1/2 left-1 size-0 -translate-y-1/2 border-y-[5px] border-l-[7px] border-y-transparent border-l-current opacity-60 transition-transform duration-150;
+}
+
+.theorem-env--proof[open] > summary.theorem-env__head::before {
+  @apply rotate-90;
+}
+
+.theorem-env--proof > summary.theorem-env__head:hover::before {
+  @apply opacity-100;
+}
+
+.theorem-env--proof > summary.theorem-env__head:focus-visible {
+  @apply outline-2 outline-offset-2 outline-accent;
+}
+
+.theorem-env--proof[open] > summary.theorem-env__head {
+  @apply mb-1;
+}
+
 .theorem-env--proof .theorem-env__qed {
   @apply mt-2 block text-right;
 }

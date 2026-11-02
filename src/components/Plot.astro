@@ -1,0 +1,206 @@
+---
+/**
+ * Lazy-loaded interactive Plotly figure for MDX posts.
+ *
+ *   <Plot src="/plots/demo.json" />
+ *   <Plot spec={{ data: [...], layout: {...}, frames: [...], config: {...} }} />
+ *
+ * Plotly (plotly.js-basic-dist-min) is dynamically imported from the client
+ * script below only once a figure scrolls near the viewport, so pages without
+ * a <Plot> never download it.
+ */
+interface Props {
+  /** URL of a Plotly figure JSON ({data, layout, frames, config}), e.g. /plots/demo.json */
+  src?: string;
+  /** Inline figure spec. Used instead of `src`. */
+  spec?: {
+    data?: unknown[];
+    layout?: Record<string, unknown>;
+    frames?: unknown[];
+    config?: Record<string, unknown>;
+  };
+  /** Figure height in px (default 420). */
+  height?: number;
+  /** Caption, also used as the accessible description. */
+  caption?: string;
+}
+
+const { src, spec, height = 420, caption } = Astro.props;
+const specJson = spec ? JSON.stringify(spec) : undefined;
+---
+
+<figure class="plot-figure">
+  <div
+    class="plot-embed"
+    role="img"
+    aria-label={caption ?? 'Interactive plot'}
+    data-src={src}
+    data-spec={specJson}
+    data-height={height}
+    style={`min-height:${height}px`}
+  >
+    <span class="plot-status">Loading plot…</span>
+  </div>
+  {caption && <figcaption class="plot-caption">{caption}</figcaption>}
+</figure>
+
+<style is:global>
+  .plot-figure {
+    margin: 1.5rem 0;
+  }
+  .plot-embed {
+    width: 100%;
+    position: relative;
+  }
+  .plot-status {
+    position: absolute;
+    inset: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 0.875rem;
+    opacity: 0.6;
+  }
+  .plot-caption {
+    margin-top: 0.25rem;
+    text-align: center;
+    font-size: 0.875rem;
+    opacity: 0.8;
+  }
+</style>
+
+<script>
+  type Json = Record<string, any>;
+
+  let plotlyPromise: Promise<any> | null = null;
+  const loadPlotly = () =>
+    (plotlyPromise ??= import('plotly.js-basic-dist-min').then((m: any) => m.default ?? m));
+
+  const isObj = (v: unknown): v is Json => !!v && typeof v === 'object' && !Array.isArray(v);
+  const merge = (base: Json, over: Json): Json => {
+    const out: Json = { ...base };
+    for (const [k, v] of Object.entries(over ?? {})) {
+      out[k] = isObj(v) && isObj(out[k]) ? merge(out[k], v) : v;
+    }
+    return out;
+  };
+
+  const cssVar = (name: string, fallback: string) =>
+    getComputedStyle(document.documentElement).getPropertyValue(name).trim() || fallback;
+
+  // Theme-derived layout pieces, read from the site's CSS variables.
+  const themeLayout = (): Json => {
+    const fg = cssVar('--foreground', '#242629');
+    const bg = cssVar('--background', '#fdfdfd');
+    const border = cssVar('--border', '#d7dde7');
+    const axis = { gridcolor: border, zerolinecolor: border, linecolor: border };
+    return {
+      paper_bgcolor: 'rgba(0,0,0,0)',
+      plot_bgcolor: 'rgba(0,0,0,0)',
+      font: { color: fg, family: 'inherit' },
+      xaxis: axis,
+      yaxis: axis,
+      legend: { bgcolor: 'rgba(0,0,0,0)' },
+      hoverlabel: { bgcolor: bg, bordercolor: border, font: { color: fg } },
+      colorway: [cssVar('--accent', '#006cac'), '#d95f02', '#1b9e77', '#7570b3', '#e7298a', '#66a61e'],
+    };
+  };
+
+  // Controls (play buttons, sliders) need explicit colors to follow the theme.
+  const themeControls = (layout: Json): Json => {
+    const fg = cssVar('--foreground', '#242629');
+    const muted = cssVar('--muted', '#e7eaef');
+    const border = cssVar('--border', '#d7dde7');
+    const patch: Json = {};
+    if (Array.isArray(layout.updatemenus)) {
+      patch.updatemenus = layout.updatemenus.map(() => ({
+        bgcolor: muted, bordercolor: border, font: { color: fg },
+      }));
+    }
+    if (Array.isArray(layout.sliders)) {
+      patch.sliders = layout.sliders.map(() => ({
+        bgcolor: muted, bordercolor: border, activebgcolor: cssVar('--accent', '#006cac'),
+        font: { color: fg }, tickcolor: border,
+      }));
+    }
+    return patch;
+  };
+
+  const buildLayout = (userLayout: Json, height: number): Json => {
+    // Defaults < theme < user layout, so authors can still override anything.
+    let layout = merge({ autosize: true, height, margin: { l: 55, r: 20, t: 30, b: 50 } }, themeLayout());
+    layout = merge(layout, userLayout ?? {});
+    // Arrays (updatemenus/sliders) merge per item: theme colors under user values.
+    const controls = themeControls(layout);
+    for (const key of ['updatemenus', 'sliders']) {
+      if (controls[key]) {
+        layout[key] = layout[key].map((item: Json, i: number) => merge(controls[key][i], item));
+      }
+    }
+    return layout;
+  };
+
+  const render = async (el: HTMLElement) => {
+    try {
+      let fig: Json;
+      if (el.dataset.spec) fig = JSON.parse(el.dataset.spec);
+      else if (el.dataset.src) {
+        const res = await fetch(el.dataset.src);
+        if (!res.ok) throw new Error(`HTTP ${res.status} for ${el.dataset.src}`);
+        fig = await res.json();
+      } else throw new Error('Plot needs a `src` or `spec` prop');
+
+      const Plotly = await loadPlotly();
+      const userLayout: Json = fig.layout ?? {};
+      const height = userLayout.height ?? (Number(el.dataset.height) || 420);
+      el.querySelector('.plot-status')?.remove();
+      el.style.minHeight = '';
+
+      await Plotly.newPlot(
+        el,
+        { data: fig.data ?? [], layout: buildLayout(userLayout, height), frames: fig.frames ?? [] },
+        { responsive: true, displaylogo: false, ...(fig.config ?? {}) },
+      );
+      (el as any)._plotUserLayout = userLayout;
+      (el as any)._plotHeight = height;
+    } catch (err) {
+      console.error('[Plot]', err);
+      const status = el.querySelector('.plot-status') as HTMLElement | null;
+      if (status) status.textContent = 'Could not load plot.';
+    }
+  };
+
+  // Re-theme already-rendered plots when the site theme toggles.
+  const retheme = async () => {
+    const els = document.querySelectorAll<HTMLElement>('.plot-embed.js-plotly-plot');
+    if (!els.length) return;
+    const Plotly = await loadPlotly();
+    els.forEach((el) => {
+      const layout = buildLayout((el as any)._plotUserLayout ?? {}, (el as any)._plotHeight);
+      const { height: _h, autosize: _a, margin: _m, ...update } = layout;
+      Plotly.relayout(el, update);
+    });
+  };
+  new MutationObserver(retheme).observe(document.documentElement, {
+    attributes: true,
+    attributeFilter: ['data-theme'],
+  });
+
+  const targets = document.querySelectorAll<HTMLElement>('.plot-embed');
+  if ('IntersectionObserver' in window) {
+    const io = new IntersectionObserver(
+      (entries) => {
+        for (const e of entries) {
+          if (e.isIntersecting) {
+            io.unobserve(e.target);
+            render(e.target as HTMLElement);
+          }
+        }
+      },
+      { rootMargin: '200px' },
+    );
+    targets.forEach((el) => io.observe(el));
+  } else {
+    targets.forEach((el) => render(el));
+  }
+</script>

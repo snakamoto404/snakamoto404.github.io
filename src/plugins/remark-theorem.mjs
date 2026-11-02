@@ -88,6 +88,15 @@ function consumeDirectiveLabel(children) {
   return { titleChildren: [], bodyChildren: children };
 }
 
+function isOpen(node) {
+  const attrs = attributeMap(node.attributes);
+  if (!("open" in attrs)) {
+    return false;
+  }
+  const value = attrs.open;
+  return value !== "false" && value !== false;
+}
+
 function refTarget(node) {
   if (typeof node.label === "string" && node.label.trim()) {
     return normalizeLabel(node.label);
@@ -129,7 +138,7 @@ function theoremHead(type, headingText, titleChildren) {
     return {
       type: "paragraph",
       data: {
-        hName: "p",
+        hName: "summary",
         hProperties: { className: "theorem-env__head" },
       },
       children,
@@ -228,10 +237,15 @@ export function remarkTheorem() {
       ];
 
       const data = node.data || (node.data = {});
-      data.hName = "div";
+      // Proofs are native collapsible <details>; default collapsed, opt in to
+      // expanded with `:::proof{open}`.
+      data.hName = type === "proof" ? "details" : "div";
       data.hProperties = {
         className: `theorem-env theorem-env--${type}`,
       };
+      if (type === "proof" && isOpen(node)) {
+        data.hProperties.open = true;
+      }
       if (label) {
         data.hProperties.id = label;
       }
