@@ -23,9 +23,11 @@ interface Props {
   height?: number;
   /** Caption, also used as the accessible description. */
   caption?: string;
+  /** Accessible description when the figure has no visible caption. */
+  label?: string;
 }
 
-const { src, spec, height = 420, caption } = Astro.props;
+const { src, spec, height = 420, caption, label } = Astro.props;
 const specJson = spec ? JSON.stringify(spec) : undefined;
 ---
 
@@ -33,7 +35,7 @@ const specJson = spec ? JSON.stringify(spec) : undefined;
   <div
     class="plot-embed"
     role="img"
-    aria-label={caption ?? 'Interactive plot'}
+    aria-label={label ?? caption ?? 'Interactive plot'}
     data-src={src}
     data-spec={specJson}
     data-height={height}

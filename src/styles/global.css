@@ -9,6 +9,8 @@ html[data-theme="light"] {
   --background: #fdfdfd;
   --foreground: #242629;
   --accent: #006cac;
+  --maroon: #8f2433;
+  --maroon-soft: rgba(143, 36, 51, 0.1);
   --muted: #e7eaef;
   --border: #d7dde7;
 }
@@ -17,6 +19,8 @@ html[data-theme="dark"] {
   --background: #1e293b;
   --foreground: #ecf0f7;
   --accent: #ff7a1a;
+  --maroon: #f0a3ac;
+  --maroon-soft: rgba(240, 163, 172, 0.14);
   --muted: #334155;
   --border: #475569;
 }
@@ -26,6 +30,7 @@ html[data-theme="dark"] {
   --color-background: var(--background);
   --color-foreground: var(--foreground);
   --color-accent: var(--accent);
+  --color-maroon: var(--maroon);
   --color-muted: var(--muted);
   --color-border: var(--border);
 }

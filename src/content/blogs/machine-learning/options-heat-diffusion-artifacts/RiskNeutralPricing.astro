@@ -1,0 +1,136 @@
+<risk-neutral-pricing data-step="2">
+  <figure>
+    <div class="panels">
+    <svg viewBox="0 0 320 164" role="img" aria-live="polite" aria-label="SBUX is $100 today and $120 or $90 tomorrow. The call pays $20 or $0 tomorrow. Its price today is unknown.">
+      <path class="branch" d="M108 62L210 24M108 62L210 108" />
+      <path class="branch" d="M202 22L210 24L205 31M205 101L210 108L202 109" />
+      <foreignObject x="149" y="12" width="28" height="28">
+        <div class="probability" xmlns="http://www.w3.org/1999/xhtml"><slot name="probability" /></div>
+      </foreignObject>
+      {[{ x: 8, y: 42, stock: '$100', call: '???', reveal: 'question' },
+        { x: 222, y: 4, stock: '$120', call: '$20', reveal: 'terminal' },
+        { x: 222, y: 88, stock: '$90', call: '$0', reveal: 'terminal' }].map(({ x, y, stock, call, reveal }) => (
+        <g transform={`translate(${x} ${y})`}>
+          <g class="stock">
+            <rect width="90" height="40" />
+            <text x="45" y="28">{stock}</text>
+          </g>
+          <g class:list={['call', 'reveal', reveal]} transform="translate(0 40)">
+            <rect width="90" height="32" />
+            <text x="45" y="24">{call}</text>
+          </g>
+        </g>
+      ))}
+    </svg>
+    <svg class="payoff-plot" viewBox="0 0 320 200" role="img" aria-label="Call payoff against stock price at expiry, in dollars. The strike is $100.">
+      <path class="branch" d="M44 151H294M288 147L294 151L288 155M44 151V25M40 31L44 25L48 31M136 151v5" />
+      <text class="axis-label" transform="translate(17 88) rotate(-90)">$ call payout</text>
+      <text class="axis-label" x="170" y="190">$ price at expiry</text>
+      <text class="tick-label" x="136" y="170">100</text>
+      <g class="call">
+        <path class="payoff-curve" d="M44 151H136L274 37" />
+        <circle class="payoff-point" cx="90" cy="151" r="2.8" />
+        <circle class="payoff-point" cx="228" cy="75" r="2.8" />
+        <text class="point-label" x="90" y="139">$0</text>
+        <text class="point-label" x="228" y="63">$20</text>
+      </g>
+    </svg>
+    </div>
+    <div class="controls" hidden>
+      <button type="button" data-direction="-1" aria-label="Previous step">←</button>
+      <button type="button" data-direction="1" aria-label="Next step">→</button>
+    </div>
+  </figure>
+</risk-neutral-pricing>
+
+<style>
+  risk-neutral-pricing {
+    --pricing-blue: #1d6fd1;
+    --pricing-green: #15803d;
+    display: block;
+    max-width: 680px;
+    margin: 1rem auto;
+  }
+  :global(html[data-theme='dark']) risk-neutral-pricing {
+    --pricing-blue: #60a5fa;
+    --pricing-green: #4ade80;
+  }
+  figure { margin: 0; }
+  .panels { display: grid; grid-template-columns: 1fr 1fr; align-items: center; gap: 2rem; }
+  svg { display: block; width: 100%; height: auto; }
+  .probability { color: var(--foreground); font-size: 18px; line-height: 1; text-align: center; }
+  .branch {
+    fill: none;
+    stroke: var(--foreground);
+    stroke-opacity: 0.55;
+    stroke-linecap: round;
+    stroke-linejoin: round;
+  }
+  .stock { color: var(--pricing-blue); }
+  .call { color: var(--pricing-green); }
+  rect { fill: currentColor; fill-opacity: 0.08; stroke: currentColor; stroke-opacity: 0.35; }
+  text { fill: currentColor; font-size: 24px; text-anchor: middle; font-variant-numeric: tabular-nums; }
+  .axis-label, .tick-label { fill: var(--foreground); font-size: 12px; }
+  .tick-label { font-size: 11px; }
+  .point-label { font-size: 11px; }
+  .payoff-curve { fill: none; stroke: currentColor; stroke-width: 2; stroke-linejoin: round; }
+  .payoff-point { fill: currentColor; stroke: var(--background); stroke-width: 1; }
+  .reveal { opacity: 1; transition: opacity 250ms ease; }
+  [data-step='0'] .reveal, [data-step='1'] .question { opacity: 0; visibility: hidden; }
+  .controls { display: flex; justify-content: center; gap: 0.5rem; }
+  .controls[hidden] { display: none; }
+  button {
+    width: 36px;
+    height: 36px;
+    padding: 0;
+    border: 0;
+    background: transparent;
+    color: var(--foreground);
+    font: inherit;
+    font-size: 22px;
+  }
+  button:disabled { opacity: 0.2; }
+  @media (max-width: 520px) {
+    .panels { grid-template-columns: 1fr; gap: 0.75rem; }
+    .panels svg { max-width: 320px; margin-inline: auto; }
+  }
+  @media (prefers-reduced-motion: reduce) {
+    .reveal { transition: none; }
+  }
+</style>
+
+<script>
+  class RiskNeutralPricing extends HTMLElement {
+    connectedCallback() {
+      if (this.dataset.initialized) return;
+      this.dataset.initialized = 'true';
+      const descriptions = [
+        'SBUX is $100 today and $120 or $90 tomorrow.',
+        'SBUX is $100 today and $120 or $90 tomorrow. The call pays $20 or $0 tomorrow.',
+        'SBUX is $100 today and $120 or $90 tomorrow. The call pays $20 or $0 tomorrow. Its price today is unknown.',
+      ];
+      const buttons = this.querySelectorAll<HTMLButtonElement>('button');
+      let step = 0;
+      const render = () => {
+        this.dataset.step = String(step);
+        this.querySelector('svg')!.setAttribute('aria-label', descriptions[step]);
+        buttons[0].disabled = step === 0;
+        buttons[1].disabled = step === 2;
+        this.querySelectorAll('.reveal').forEach((node) => {
+          node.setAttribute('aria-hidden', String(step === 0 || (step === 1 && node.classList.contains('question'))));
+        });
+      };
+      buttons.forEach((button) => {
+        button.addEventListener('click', () => {
+          step = Math.max(0, Math.min(2, step + Number(button.dataset.direction)));
+          render();
+        });
+      });
+      render();
+      this.querySelector<HTMLElement>('.controls')!.hidden = false;
+    }
+  }
+  if (!customElements.get('risk-neutral-pricing')) {
+    customElements.define('risk-neutral-pricing', RiskNeutralPricing);
+  }
+</script>

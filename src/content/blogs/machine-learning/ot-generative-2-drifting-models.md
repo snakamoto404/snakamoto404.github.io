@@ -1,7 +1,7 @@
 ---
 title: "OT for generative modeling 2 — Wasserstein gradients and drifting models"
 date: 2026-02-23
-summary: "We look at Kaiming Deng et al.'s Drifting Models, interpret the antisymmetric drifting field as Wasserstein gradient flow on the reverse KL between kernel-smoothed distributions, and develop the connection to maximum likelihood estimation."
+summary: "We look at Kaiming Deng et al.'s Drifting Models, interpret the antisymmetric drifting field as Wasserstein gradient flow on the reverse KL between kernel-smoothed distributions, and explore drifting's relationship to maximum likelihood estimation."
 ---
 
 Diffusion and flow matching split the generative problem into two phases: at *training* time, learn a vector field; at *inference* time, integrate an ODE or SDE through that field to produce a sample. The integration is expensive, and a great deal of recent work has gone into compressing it: distillation, consistency models, progressive reduction.

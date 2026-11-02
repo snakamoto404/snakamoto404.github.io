@@ -34,6 +34,12 @@
       @apply text-blue-700 dark:text-blue-400;
     }
 
+    /* Maroon marker: the running "key claim" accent in a post. */
+    .maroon,
+    .maroon strong {
+      color: var(--maroon);
+    }
+
     li {
       @apply marker:text-accent;
     }

@@ -1,0 +1,410 @@
+---
+/**
+ * Autoplaying four-quadrant figure of a Bachelier call, V(t, S) = E[(S_1)_+ | S_t = S].
+ *
+ *   options price vs time   |  x = y (turns the horizontal price axis vertical)
+ *   ------------------------+------------------------------------------------
+ *   stock price vs time     |  stock price vs options price at time t
+ *
+ * Each path's four markers form a rectangle: the two left panels share time, the
+ * two bottom panels share stock price, and the two right panels share options price.
+ *
+ * A third row restates the same curve as a heated rod, with position = stock price and
+ * temperature = options price. Heat time runs as 1 - t, so the rod plays in reverse: two
+ * thermometers sit at the two stock prices and read the two options prices.
+ */
+const tx = 26; // x of time 0
+const tw = 540; // px width of the time axis (about 3/4 of the figure, with its label)
+const side = 170; // px height of both rows and width of the right column; x = y stays at 45 degrees
+const vmax = 1.26; // options price axes span [0, vmax], just enough for the curve at t = 0
+const smax = 1.2; // stock price axes span [-smax, smax]
+const vx = tx + tw + 24; // x of options price 0
+const vy = 14 + side; // y of options price 0
+const sy = vy + 22 + side / 2; // y of stock price 0
+const vu = side / vmax; // px per unit of options price, both horizontally and vertically
+const su = side / (2 * smax); // px per unit of stock price
+
+const right = vx + side;
+const bottom = sy + side / 2;
+
+const heatH = 105; // px height of the temperature plot
+const heatY = bottom + 44 + heatH; // y of temperature 0, also the underside of the rod
+const heatU = heatH / vmax; // px per unit of temperature
+const posU = side / (2 * smax); // px per unit of position
+const rodX = tx; // x of the rod's left end
+const rodW = tw - 10; // leaves room for the temperature label
+const rodH = 26;
+const rodU = rodW / (2 * smax); // px per unit of position along the rod
+const rodCenter = rodX + rodW / 2;
+const rodStops = 33;
+const bulbR = 6;
+const bulbY = heatY - rodH - bulbR + 1; // bulbs rest on the rod
+const tubeTop = heatY - heatH - 6;
+const tubeBase = bulbY - bulbR + 1; // where the mercury starts
+const mercuryU = (tubeBase - tubeTop - 2) / vmax; // px of mercury per unit of temperature
+
+const G = { tx, tw, vx, vy, sy, vu, su, smax, heatY, heatU, posU, rodX, rodU, tubeBase, mercuryU };
+const AXIS_OVERSHOOT = 12; // past the last data value, leaving room for the arrowhead
+const TICK = 4;
+
+const multiples = (lo, hi, step) =>
+  Array.from({ length: Math.floor((hi - lo) / step + 1e-9) + 1 }, (_, i) => lo + i * step);
+const timeTicks = multiples(0, 1, 0.1).map((t) => tx + t * tw);
+const stockTicks = multiples(-1, 1, 0.25).map((s) => sy - s * su);
+const optionTicks = multiples(0, vmax, 0.25);
+
+const xAxis = (x0, length, y) => `M${x0} ${y}H${x0 + length + AXIS_OVERSHOOT}`;
+const yAxis = (x, y0, length) => `M${x} ${y0}V${y0 - length - AXIS_OVERSHOOT}`;
+const xTicks = (xs, y) => xs.map((x) => `M${x} ${y}v${TICK}`).join('');
+const yTicks = (x, ys) => ys.map((y) => `M${x} ${y}h${-TICK}`).join('');
+const axes = [
+  xAxis(vx, side, heatY),
+  yAxis(vx, heatY, heatH),
+  xAxis(tx, tw, vy),
+  xAxis(tx, tw, bottom),
+  xAxis(vx, side, bottom),
+  yAxis(tx, vy, side),
+  yAxis(tx, bottom, side),
+  yAxis(vx, bottom, side),
+];
+const ticks = [
+  xTicks(multiples(-1, 1, 0.25).map((p) => vx + (p + smax) * posU), heatY),
+  yTicks(vx, optionTicks.map((v) => heatY - v * heatU)),
+  xTicks(multiples(-1, 1, 0.25).map((p) => rodX + (p + smax) * rodU), heatY),
+  xTicks(timeTicks, vy),
+  xTicks(timeTicks, bottom),
+  xTicks(optionTicks.map((v) => vx + v * vu), bottom),
+  yTicks(tx, optionTicks.map((v) => vy - v * vu)),
+  yTicks(tx, stockTicks),
+  yTicks(vx, stockTicks),
+].join('');
+---
+
+<figure class="bq">
+  <svg
+    viewBox={`0 0 ${right + AXIS_OVERSHOOT + 2} ${heatY + 24}`}
+    role="img"
+    aria-label="Two Brownian stock price paths drive a Bachelier call: its price curve collapses to a ReLU as time runs out, and each path's options price is read off through the x = y line. Below, the same curve is the temperature along a heated rod played in reverse, with thermometers at the two stock prices reading the two options prices."
+  >
+    <defs>
+      <linearGradient id="bq-heat" gradientUnits="userSpaceOnUse" x1={rodX} x2={rodX + rodW} y1="0" y2="0">
+        {Array.from({ length: rodStops }, (_, i) => <stop data-stop offset={i / (rodStops - 1)}></stop>)}
+      </linearGradient>
+      <linearGradient id="bq-sheen" x1="0" x2="0" y1="0" y2="1">
+        <stop offset="0" stop-color="#fff" stop-opacity="0.45"></stop>
+        <stop offset="0.45" stop-color="#fff" stop-opacity="0"></stop>
+        <stop offset="1" stop-color="#000" stop-opacity="0.22"></stop>
+      </linearGradient>
+      <filter id="bq-glow" x="-5%" y="-150%" width="110%" height="400%">
+        <feGaussianBlur stdDeviation="8"></feGaussianBlur>
+      </filter>
+      <clipPath id="bq-reveal"><rect data-reveal x={tx} y="0" width="0" height={bottom}></rect></clipPath>
+      <marker id="bq-arrow" viewBox="0 0 8 6" refX="7" refY="3" markerWidth="8" markerHeight="6" markerUnits="userSpaceOnUse" orient="auto">
+        <path class="arrow" d="M0 0L8 3L0 6Z"></path>
+      </marker>
+    </defs>
+
+    {axes.map((d) => <path class="axis" d={d} marker-end="url(#bq-arrow)"></path>)}
+    <path class="axis" d={ticks}></path>
+    <path class="identity" d={`M${vx} ${vy}L${right} ${vy - side}`}></path>
+
+    <g data-dynamic>
+      <rect x={rodX} y={heatY - rodH} width={rodW} height={rodH} rx={rodH / 2} fill="url(#bq-heat)" filter="url(#bq-glow)"></rect>
+      <rect x={rodX} y={heatY - rodH} width={rodW} height={rodH} rx={rodH / 2} fill="url(#bq-heat)"></rect>
+      <rect x={rodX} y={heatY - rodH} width={rodW} height={rodH} rx={rodH / 2} fill="url(#bq-sheen)"></rect>
+      <path class="curve" data-curve></path>
+      <path class="curve" data-heat-curve></path>
+      {['green', 'blue'].map((track) => (
+        <g class={track} data-track>
+          <path class="guide" data-guide></path>
+          <g clip-path="url(#bq-reveal)">
+            <path class="trace" data-stock></path>
+            <path class="trace" data-option></path>
+          </g>
+          <circle r="3.5" data-dot></circle>
+          <circle r="3.5" data-dot></circle>
+          <circle r="3.5" data-dot></circle>
+          <circle r="3.5" data-dot></circle>
+          <circle r="3.5" data-heat-dot></circle>
+          <g data-thermometer>
+            <rect class="tube" x="-3" y={tubeTop} width="6" height={tubeBase - tubeTop + 2} rx="3"></rect>
+            <rect class="mercury" x="-1.5" width="3" data-mercury></rect>
+            <circle class="bulb" cy={bulbY} r={bulbR}></circle>
+          </g>
+        </g>
+      ))}
+    </g>
+
+    <rect class="rod" x={rodX} y={heatY - rodH} width={rodW} height={rodH} rx={rodH / 2}></rect>
+
+    <text class="label" transform={`translate(${vx - 9} ${heatY - heatH / 2}) rotate(-90)`}>temperature</text>
+    <text class="label now" x={right} y={heatY + 18}>position</text>
+    <path class="rewind" d={`M${rodCenter - 62} ${heatY + 9}l8 -5v10zM${rodCenter - 71} ${heatY + 9}l8 -5v10z`} transform="translate(0 4)"></path>
+    <text class="label start" x={rodCenter - 50} y={heatY + 18}>heat time <tspan data-heat-now>1.00</tspan></text>
+
+    <text class="label" transform={`translate(13 ${sy}) rotate(-90)`}>stock price</text>
+    <text class="label" transform={`translate(13 ${vy - side / 2}) rotate(-90)`}>options price</text>
+    <text class="label" x={tx + tw / 2} y={bottom + 18}>time</text>
+    <text class="label now" x={right} y={bottom + 18}>options price at time <tspan data-now>0.00</tspan></text>
+  </svg>
+</figure>
+
+<style>
+  .bq {
+    --bq-green: #15803d;
+    --bq-blue: #1d6fd1;
+    margin: 1.75rem 0;
+  }
+  :global(html[data-theme='dark']) .bq {
+    --bq-green: #4ade80;
+    --bq-blue: #60a5fa;
+  }
+  svg {
+    display: block;
+    width: 100%;
+    height: auto;
+    overflow: visible;
+  }
+  path {
+    fill: none;
+  }
+  .axis {
+    stroke: var(--foreground);
+    stroke-opacity: 0.55;
+  }
+  .arrow {
+    fill: var(--foreground);
+    fill-opacity: 0.55;
+  }
+  .rod {
+    fill: none;
+    stroke: var(--foreground);
+    stroke-opacity: 0.55;
+  }
+  .tube {
+    fill: var(--background);
+    stroke: var(--foreground);
+    stroke-opacity: 0.55;
+  }
+  .mercury,
+  .bulb,
+  .rewind {
+    fill: var(--track);
+    stroke: none;
+  }
+  .rewind {
+    fill: var(--foreground);
+  }
+  .identity {
+    stroke: var(--foreground);
+    stroke-opacity: 0.25;
+    stroke-dasharray: 4 4;
+  }
+  .curve {
+    stroke: var(--maroon);
+    stroke-width: 2.5;
+  }
+  .green {
+    --track: var(--bq-green);
+  }
+  .blue {
+    --track: var(--bq-blue);
+  }
+  .trace {
+    stroke: var(--track);
+    stroke-width: 1.5;
+    stroke-linejoin: round;
+  }
+  .guide {
+    stroke: var(--track);
+    stroke-opacity: 0.45;
+    stroke-dasharray: 2 4;
+  }
+  circle {
+    fill: var(--track);
+    stroke: var(--background);
+    stroke-width: 1.5;
+  }
+  .label {
+    fill: var(--foreground);
+    font-size: 13px;
+    text-anchor: middle;
+  }
+  .now {
+    font-variant-numeric: tabular-nums;
+    text-anchor: end;
+  }
+  .start {
+    font-variant-numeric: tabular-nums;
+    text-anchor: start;
+  }
+  /* The SVG scales with its width, so narrow screens need larger type in SVG units. */
+  @media (max-width: 640px) {
+    .label {
+      font-size: 22px;
+    }
+  }
+</style>
+
+<script define:vars={{ G }}>
+  const fig = document.querySelector('.bq');
+  const { tx, tw, vx, vy, sy, vu, su, smax, heatY, heatU, posU, rodX, rodU, tubeBase, mercuryU } = G;
+
+  const PLAY = 9; // seconds for t to run from 0 to 1
+  const HOLD = 1.6; // seconds spent on the final ReLU
+  const FADE = 0.4;
+  const STEPS = tw;
+  const PATH_BOUND = 1.1; // keeps every marker inside the axes
+
+  const xT = (t) => tx + t * tw;
+  const yS = (s) => sy - s * su;
+  const xV = (v) => vx + v * vu;
+  const yV = (v) => vy - v * vu;
+  const xP = (p) => vx + (p + smax) * posU;
+  const yH = (v) => heatY - v * heatU;
+  const xR = (p) => rodX + (p + smax) * rodU;
+
+  // Rod colormap over temperature in [0, 1]: cold slate, amber, orange, deep red.
+  const HEAT = [
+    [199, 210, 222],
+    [245, 196, 84],
+    [232, 89, 12],
+    [150, 20, 26],
+  ];
+  const heatColor = (value) => {
+    const x = Math.min(1, Math.max(0, value)) * (HEAT.length - 1);
+    const k = Math.min(Math.floor(x), HEAT.length - 2);
+    const mix = HEAT[k].map((c, j) => Math.round(c + (HEAT[k + 1][j] - c) * (x - k)));
+    return `rgb(${mix.join(',')})`;
+  };
+
+  // Standard normal cdf (Abramowitz & Stegun 26.2.17).
+  const pdf = (z) => Math.exp((-z * z) / 2) / Math.sqrt(2 * Math.PI);
+  const cdf = (z) => {
+    const k = 1 / (1 + 0.2316419 * Math.abs(z));
+    const tail =
+      pdf(z) * k * (0.31938153 + k * (-0.356563782 + k * (1.781477937 + k * (-1.821255978 + k * 1.330274429))));
+    return z > 0 ? 1 - tail : tail;
+  };
+
+  // Bachelier call with unit volatility, strike 0 and expiry 1.
+  const call = (t, s) => {
+    const w = Math.sqrt(1 - t);
+    if (w < 1e-6) return Math.max(s, 0);
+    return s * cdf(s / w) + w * pdf(s / w);
+  };
+
+  // Seeded (mulberry32) so that the two paths are the same on every page load.
+  let seed = 11;
+  const uniform = () => {
+    seed = (seed + 0x6d2b79f5) | 0;
+    let r = Math.imul(seed ^ (seed >>> 15), 1 | seed);
+    r = (r + Math.imul(r ^ (r >>> 7), 61 | r)) ^ r;
+    return ((r ^ (r >>> 14)) >>> 0) / 4294967296;
+  };
+  const gaussian = () => Math.sqrt(-2 * Math.log(1 - uniform())) * Math.cos(2 * Math.PI * uniform());
+
+  // Rejection-sample a Brownian path that stays in bounds and ends in [lo, hi].
+  const brownian = (lo, hi) => {
+    for (;;) {
+      const path = [0];
+      for (let i = 0; i < STEPS; i++) path.push(path[i] + gaussian() / Math.sqrt(STEPS));
+      const end = path[STEPS];
+      if (end >= lo && end <= hi && path.every((s) => Math.abs(s) < PATH_BOUND)) return path;
+    }
+  };
+
+  const polyline = (xs, ys) => xs.map((x, i) => `${i ? 'L' : 'M'}${x.toFixed(1)} ${ys[i].toFixed(1)}`).join('');
+
+  const tracks = [...fig.querySelectorAll('[data-track]')].map((el) => ({
+    stockEl: el.querySelector('[data-stock]'),
+    optionEl: el.querySelector('[data-option]'),
+    guideEl: el.querySelector('[data-guide]'),
+    dots: [...el.querySelectorAll('[data-dot]')],
+    heatDot: el.querySelector('[data-heat-dot]'),
+    thermometer: el.querySelector('[data-thermometer]'),
+    mercury: el.querySelector('[data-mercury]'),
+    stock: [],
+    option: [],
+  }));
+  const dynamic = fig.querySelector('[data-dynamic]');
+  const reveal = fig.querySelector('[data-reveal]');
+  const curve = fig.querySelector('[data-curve]');
+  const now = fig.querySelector('[data-now]');
+  const heatNow = fig.querySelector('[data-heat-now]');
+  const heatCurve = fig.querySelector('[data-heat-curve]');
+  const stops = [...fig.querySelectorAll('[data-stop]')];
+  const stopPositions = stops.map((_, k) => -smax + (2 * smax * k) / (stops.length - 1));
+  const grid = Array.from({ length: 151 }, (_, i) => -smax + (2 * smax * i) / 150);
+  const stepTimes = Array.from({ length: STEPS + 1 }, (_, i) => i / STEPS);
+
+  // One path finishes in the money and the other out of it, so both ReLU arms get used.
+  const newPaths = () => {
+    const ends = [
+      [0.45, 1.05],
+      [-1.05, -0.2],
+    ];
+    tracks.forEach((track, k) => {
+      track.stock = brownian(...ends[k]);
+      track.option = track.stock.map((s, i) => call(stepTimes[i], s));
+      track.stockEl.setAttribute('d', polyline(stepTimes.map(xT), track.stock.map(yS)));
+      track.optionEl.setAttribute('d', polyline(stepTimes.map(xT), track.option.map(yV)));
+    });
+  };
+
+  const draw = (time) => {
+    const i = Math.round(time * STEPS);
+    const t = i / STEPS; // snapped so that trace tips, markers and the reveal clip agree
+    const x = xT(t);
+    now.textContent = t.toFixed(2);
+    heatNow.textContent = (1 - t).toFixed(2);
+    reveal.setAttribute('width', t * tw);
+    const prices = grid.map((s) => call(t, s));
+    curve.setAttribute('d', polyline(prices.map(xV), grid.map(yS)));
+    heatCurve.setAttribute('d', polyline(grid.map(xP), prices.map(yH)));
+    stops.forEach((stop, k) => stop.setAttribute('stop-color', heatColor(call(t, stopPositions[k]) / smax)));
+    for (const { stock, option, guideEl, dots, heatDot, thermometer, mercury } of tracks) {
+      const ys = yS(stock[i]);
+      const xv = xV(option[i]);
+      const yv = yV(option[i]);
+      guideEl.setAttribute('d', `M${x} ${ys}H${xv}V${yv}H${x}Z`);
+      [[x, ys], [xv, ys], [xv, yv], [x, yv]].forEach(([cx, cy], d) => {
+        dots[d].setAttribute('cx', cx);
+        dots[d].setAttribute('cy', cy);
+      });
+      heatDot.setAttribute('cx', xP(stock[i]));
+      heatDot.setAttribute('cy', yH(option[i]));
+      thermometer.setAttribute('transform', `translate(${xR(stock[i])} 0)`);
+      mercury.setAttribute('y', tubeBase - option[i] * mercuryU);
+      mercury.setAttribute('height', option[i] * mercuryU + 2);
+    }
+  };
+
+  newPaths();
+  draw(0);
+
+  if (matchMedia('(prefers-reduced-motion: reduce)').matches) {
+    draw(1);
+  } else {
+    const cycle = PLAY + HOLD + FADE;
+    let clock = 0;
+    let last = null;
+    let frame = null;
+
+    const tick = (ms) => {
+      clock += last === null ? 0 : Math.min((ms - last) / 1000, 0.1);
+      last = ms;
+      if (clock >= cycle) clock = 0;
+      dynamic.style.opacity = Math.min(1, clock / FADE, (cycle - clock) / FADE);
+      draw(Math.min(1, clock / PLAY));
+      frame = requestAnimationFrame(tick);
+    };
+
+    // Only animate while the figure is on screen.
+    new IntersectionObserver(([entry]) => {
+      cancelAnimationFrame(frame);
+      last = null;
+      if (entry.isIntersecting) frame = requestAnimationFrame(tick);
+    }).observe(fig);
+  }
+</script>

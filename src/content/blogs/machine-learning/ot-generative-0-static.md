@@ -1,6 +1,6 @@
 ---
 title: "OT for generative modeling 0 — the static perspective"
-date: 2026-02-23
+date: 2026-02-22
 summary: "Why we care about optimal transport (OT), the static (Kantorovich) definition of Wasserstein definition, the linear programming (Kantorovich-Rubinstein) dual formulation, and WGAN."
 ---
 

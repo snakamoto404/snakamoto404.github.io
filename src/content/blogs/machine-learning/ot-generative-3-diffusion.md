@@ -4,7 +4,7 @@ date: 2026-03-01
 summary: "We derive the interpretation of physical diffusion as Wasserstein gradient flow, noise-spectrum decomposition of KL-divergence, diffusion models as MLE, and first-principles analysis of flow matching scalability. Honorable mentions to Fokker-Planck equation, Anderson's theorem, de Bruijin identity, and Tweedie's formula."
 ---
 
-This part uses the Wasserstein toolkit we've developed in parts 0 and 1 (links) to unpack the dominant generative paradigm from first principles.
+This part uses the Wasserstein toolkit we've developed in [parts 0](/blogs/machine-learning/ot-generative-0-static/)–[1](/blogs/machine-learning/ot-generative-1-wasserstein-geometry/) to unpack the dominant generative paradigm from first principles.
 We begin with some physics on Brownian motion and stochastic processes, highlights include:
 
 - **Brownian motion $\leftrightarrow$ score flow** provides the fundamental bridge between SDE and ODE formulations as well as a valuable perspective on the score-ODE which shows up everywhere in generative modeling.
