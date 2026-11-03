@@ -1,0 +1,31 @@
+---
+import BaseLayout from '../layouts/BaseLayout.astro';
+---
+
+<BaseLayout title="Nicholas Lyu — CV" description="Curriculum vitae of Nicholas Lyu.">
+  <section class="space-y-6">
+    <div class="space-y-2">
+      <h1 class="text-3xl font-semibold tracking-tight">Nicholas Lyu</h1>
+      <p class="text-foreground/80">Curriculum vitae</p>
+    </div>
+
+    <div class="flex flex-wrap items-center gap-4">
+      <a
+        href="/cv.pdf"
+        download="Nicholas-Lyu-CV.pdf"
+        class="rounded-md bg-accent px-4 py-2 font-medium text-white hover:opacity-90"
+      >
+        Download CV (PDF)
+      </a>
+      <a href="/cv.pdf" class="font-medium text-accent underline underline-offset-4">
+        View PDF
+      </a>
+    </div>
+
+    <iframe
+      src="/cv.pdf"
+      title="Nicholas Lyu's curriculum vitae"
+      class="h-[75vh] min-h-96 w-full rounded-xl border border-border"
+    ></iframe>
+  </section>
+</BaseLayout>
