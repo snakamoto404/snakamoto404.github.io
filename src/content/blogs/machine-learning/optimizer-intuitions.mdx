@@ -1,0 +1,118 @@
+---
+title: "Optimizer Intuitions"
+date: 2026-10-02
+summary: "Some first-principles perspectives on how Adam and Muon relates to SGD."
+---
+
+Here, we formalize three first-principles perspectives on how Adam and Muon relate to SGD:
+1. Standard gradient descent executes **soft $L_2$-norm penalized maximal updates**.
+2. **Muon executess operator-norm constrained maximal updates**.
+3. Adam as SignSGD.
+
+Table of contents (this is a short note):
+
+- [Proximal optimization](#proximal-optimization)
+  - [SGD variants and $L_2$ norm](#sgd-variants-and-l_2-norm)
+  - [Muon optimizes spectral-constrained linearization](#muon-optimizes-spectral-constrained-linearization)
+- [Adam as SignSGD](#adam-as-signsgd)
+
+## Proximal optimization
+
+Here, we present an interpretation that relates SGD to Muon.
+Given matrix weights $W$, loss $L$, and gradient $G = \nabla_W L(W)$, linearize to obtain
+$$
+    L(W + \Delta) \approx \tilde L(W + \Delta) := L(W) + \la G, \Delta\ra
+$$
+The Frobenius norm is just element-wise $L_2$:
+$$
+    \la A, B\ra_F = \mathrm{tr}(A^TB), \quad \|A\|_2^2 = \la A, A\ra
+$$
+Of course, the linearized approximation **is only valid for small $\Delta$**; so we should choose the weight update $\Delta$ to optimize $\tilde L(W + \Delta)$ subject to some constraints; such as:
+- **hard proximity constraint**: $\|\Delta\|\leq \rho$ w.r.t. some norm
+- **soft proximity penalty**: minimize $\tilde L(W + \Delta) + \tfrac{\lambda}{2}\|\Delta\|^2$.
+
+### SGD variants and $L_2$ norm
+
+:::proposition[SGD optimizes $L_2$-proximal linearization]
+Consider a soft $L_2$ penalty, dropping the constant term $L(W)$ yields the update objective
+$$
+    \min_\Delta \la G, \Delta\ra + \df \lambda 2 \|\Delta\|^2
+$$
+Differentiating yields $G + \lambda \Delta = 0 \implies \Delta_* = -G / \lambda$.
+
+Reparameterizing with $\eta = 1/\lambda$ yields the standard gradient-update formula
+$$
+    W' \leftarrow W - \eta G
+$$
+:::
+
+To foreshadow Muon, consider a hard $L_2$-norm constraint
+$$
+    \min_{\|\Delta\|\leq \rho} \la G, \Delta\ra
+$$
+Using Cauchy-Schwarz: $\la G, \Delta\ra \geq -\|G\|\cdot \|\Delta\| \geq -\rho \|G\|$.
+
+The bound is obtained by update of length $\rho$ in opposite direction to the gradient; this yields normalized gradient descent
+$$
+    \Delta_* = -\rho \df{G}{\|G\|}\implies W \leftarrow W - \rho \df{G}{\|G\|}
+$$
+(applying this component-wise is actually similar to the Adam optimizer!)
+
+### Muon optimizes spectral-constrained linearization
+
+The operator (or spectral) norm of a linear operator measures how much it can stretch an input.
+$$
+    \|O\|_{\mathrm{op}} := \max_{\|x\|_2 \leq 1} \|Ox\|
+$$
+Using SVD $O = \sum \sigma_j |u_j\ra \la v_j|$, it's easy to see that:
+- $\|O\| = |\sigma_{\mathrm{max}}|$
+- The op-norm equation is obtained by $x = |v_{\mathrm{max}}\ra$
+
+Next, consider a hard operator-norm (instead of e.g. $L_2$ norm) constraint on a matrix parameter $\|\Delta\|\leq \rho$, the optimization problem becomes
+$$
+    \mathrm{min}_{\sigma_{\mathrm{max}} \leq \rho} \la G, \Delta\ra
+$$
+Recalling some properties of the norm, for basis matrices $A = |a\ra \la b|, B=|c\ra \la d|$, we have
+$$
+    \la A, B\ra = \mathrm{tr} \left(|b\ra \la a|c\ra \la d|\right) = \la d|b\ra \la a|c\ra
+$$
+SVD-decompose $G = \sum \sigma_j |u_j\ra \la v_j|$ and $\Delta = \sum \tilde \sigma_j|\tilde u_j\ra \la \tilde v_j|$, substituting
+$$
+    \mathrm{min}_{\sigma_{\mathrm{max}} \leq \rho} \la G, \Delta\ra
+    = \sum_{jk} \min_{\tilde \sigma_{\mathrm{max}} \leq \rho} \sigma_j \tilde \sigma_k \cdot \la u_j|\tilde u_k\ra \cdot \la \tilde v_k|v_j\ra
+$$
+Subject to SVD's orthogonality constraints, with some handwaving (linearize in $G$ and apply Cauchy-Schwarz saturation conditions) to convince ourselves that $u = \tilde u, v=\tilde v$, then
+$$
+    \mathrm{min}_{\sigma_{\mathrm{max}} \leq \rho} \la G, \Delta\ra = \mathrm{min}_{\sigma_{\mathrm{max}} \leq \rho} \sum_j \sigma_j \tilde \sigma_j = -\rho \sum_j \sigma_j
+$$
+:::proposition[muon optimizer updates]
+Given the gradient's SVD $G = U\Sigma V^T$, the Muon update (without momentum)
+$$
+\Delta = -\rho \sum |u_j\ra \la v_j| = -\rho UV^T
+$$
+minimizes the linearized loss $\tilde L(W+\Delta) = L(W) + \la G, \Delta\ra$ subject to a hard operator-norm constraint.
+$$
+    -\rho UV^T = \mathrm{argmin}_{\sigma_{\mathrm{max}} \leq \rho} \tilde L(W+\Delta)
+$$
+The linearized loss decrease is proportional to the sum of singular values of $G$.
+:::
+
+## Adam as SignSGD
+
+Let $W$ denote weights, $\eta$ learning rate, $\lambda$ weight decay, and $U$ the computed update, the AdamW update reads:
+$$
+    W \leftarrow (1 - \eta \lambda)\, W - \eta\, U
+$$
+Given gradients $G$, the update is simply the **<u>coordinate-wise</u> normalized gradient**
+$$
+    U = \dfrac{\hat G_{\mathrm{ewm}}}{\sqrt{G^2_{\mathrm{ewm}}} + \epsilon}
+$$
+There're some bells and whistles as to the exponential moving average calculation (also interpretable as momentum), which is used as a bias-variance tradeoff against noisy statistics, and de-biasing.
+
+:::proposition[adam as SignSGD]{#adam-signsgd}
+Abstracting out the EWM calculation, Adam updates are ideally $\pm 1$ based on the sign of the gradient. More precisely, the typical entries of Adam updates are constant-sized:
+$$
+    \|U_{\mathrm{Adam}}\|_{\mathrm{RMS}} = \Theta(1)
+$$
+:::
+This SignSGD interpretation is the intuition behind counterexamples to Adam convergence.

@@ -1,0 +1,69 @@
+---
+import { renderMathLabels } from './figure-math.mjs';
+
+const nodes = [
+  { x: 20, y: 16, width: 390, height: 82, size: 23, caption: 'Martingale options pricing', year: '1979–81', captionY: 119, href: '#global-measure-perspective-on-options-pricing',
+    formula: 'V_0(x_0)=\\mathbb{E}_{X_T\\sim\\mathbb{Q}\\mid x_0} V_T(X_T)' },
+  { x: 490, y: 8, width: 390, height: 98, size: 20, caption: 'Feynman path integral', year: '1948', captionY: 119, href: '#free-particle-quantum-mechanics',
+    formula: '\\psi(x,t)=\\displaystyle\\int_{-\\infty}^{\\infty}\\frac{e^{i(x-x_0)^2/(2t)}}{\\sqrt{2\\pi i t}}\\psi_0(x_0)\\,dx_0' },
+  { x: 20, y: 235, width: 390, height: 82, size: 25, caption: 'Bachelier options pricing', year: '1900', captionY: 340, href: '#local-arbitrage-perspective-and-the-heart-of-black-scholes',
+    formula: '\\partial_t V+\\frac12\\partial_x^2 V=0' },
+  { x: 490, y: 235, width: 390, height: 82, size: 25, caption: 'Schrödinger equation', year: '1926', captionY: 340, href: '#free-particle-quantum-mechanics',
+    formula: '\\partial_t\\psi=\\frac{i}{2}\\partial_x^2\\psi' },
+  { x: 20, y: 465, width: 390, height: 70, size: 25, caption: 'Heat diffusion', year: '1807', captionY: 555, href: '#quick-detour-on-the-heat-equation',
+    formula: '\\partial_t u=\\frac12\\partial_x^2 u' },
+  { x: 490, y: 465, width: 390, height: 70, size: 20, caption: 'Black–Scholes–Merton', year: '1973', captionY: 555, href: '#bells-and-whistles-and-the-full-black-scholes',
+    formula: '\\partial_t V+rp\\partial_p V+\\frac{\\sigma^2p^2}{2}\\partial_p^2 V-rV=0' },
+];
+const formulas = renderMathLabels(nodes.map(({ formula }) => formula));
+---
+
+<figure class="visual-recap">
+  <svg viewBox="0 0 900 575" role="group" aria-label="A visual recap connecting local evolution equations and global expectations. Feynman–Kac connects martingale options pricing to the Bachelier equation. Reversing time connects Bachelier pricing to heat diffusion; imaginary time connects it to the free-particle Schrödinger equation and its propagator. Restoring volatility, interest, and geometric motion gives Black–Scholes–Merton.">
+    <defs>
+      <marker id="recap-arrow" viewBox="0 0 8 6" refX="7" refY="3" markerWidth="8" markerHeight="6" orient="auto-start-reverse" markerUnits="userSpaceOnUse">
+        <path class="arrow" d="M0 0L8 3L0 6" />
+      </marker>
+    </defs>
+
+    <g class="connections">
+      <path d="M215 140V244" marker-start="url(#recap-arrow)" marker-end="url(#recap-arrow)" />
+      <path d="M685 140V244" marker-start="url(#recap-arrow)" marker-end="url(#recap-arrow)" />
+      <path d="M340 276H580" marker-start="url(#recap-arrow)" marker-end="url(#recap-arrow)" />
+      <path d="M215 365V470" marker-start="url(#recap-arrow)" marker-end="url(#recap-arrow)" />
+      <path d="M245 363C350 420 515 405 655 470" marker-end="url(#recap-arrow)" />
+    </g>
+
+    <text class="relation start" x="234" y="185">Feynman–Kac</text>
+    <text class="relation" x="460" y="258">imaginary time</text>
+    <text class="relation end" x="195" y="413">reverse time</text>
+    <text class="extension" x="455" y="389">bells and whistles</text>
+
+    {nodes.map(({ x, y, width, height, size, caption, year, captionY, href }, index) => (
+      <g>
+        <foreignObject x={x} y={y} width={width} height={height}>
+          <div class="formula" style={`font-size: ${size}px`} xmlns="http://www.w3.org/1999/xhtml" set:html={formulas[index]} />
+        </foreignObject>
+        <text class="caption" x={x + width / 2} y={captionY}>{href ? <a href={href}><tspan>{caption}</tspan></a> : caption}<tspan dx="4">{`(${year})`}</tspan></text>
+      </g>
+    ))}
+  </svg>
+</figure>
+
+<style>
+  .visual-recap { --recap-link: #1d6fd1; margin: 1.5rem 0; }
+  :global(html[data-theme='dark']) .visual-recap { --recap-link: #60a5fa; }
+  svg { display: block; width: 100%; height: auto; }
+  .formula { display: grid; place-items: center; height: 100%; color: var(--foreground); line-height: 1; }
+  .connections path { fill: none; stroke: var(--foreground); stroke-opacity: 0.4; stroke-width: 1.2; }
+  .arrow { fill: none; stroke: var(--foreground); stroke-opacity: 0.55; stroke-width: 1; stroke-linecap: round; stroke-linejoin: round; }
+  text { font-family: inherit; text-anchor: middle; }
+  .caption { fill: var(--foreground); fill-opacity: 0.75; font-size: 15px; }
+  .relation { fill: var(--maroon); font-size: 14px; }
+  .start { text-anchor: start; }
+  .end { text-anchor: end; }
+  .extension { fill: var(--foreground); fill-opacity: 0.6; font-size: 12px; }
+  a { cursor: pointer; text-decoration: none; }
+  a tspan { fill: var(--recap-link); fill-opacity: 1; font-weight: 700; text-decoration: none; }
+  a:hover tspan { fill-opacity: 0.8; }
+</style>

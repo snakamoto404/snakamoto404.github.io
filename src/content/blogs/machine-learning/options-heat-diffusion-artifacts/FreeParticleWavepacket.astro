@@ -1,0 +1,123 @@
+---
+import { FREE_PARTICLE, plotX, wavepacketFrame } from './free-particle-model.mjs';
+import { renderMathLabels } from './figure-math.mjs';
+const frame = wavepacketFrame(0);
+const ticks = Array.from({ length: 17 }, (_, i) => i - 8)
+  .map((x) => `M${plotX(x)} ${FREE_PARTICLE.baseline - 2}v4`).join('');
+const labels = renderMathLabels(['\\mathrm{Re}(\\psi)', '\\mathrm{Im}(\\psi)', '|\\psi|^2']);
+---
+
+<free-particle-wavepacket>
+  <figure>
+    <svg viewBox={`0 0 ${FREE_PARTICLE.width} ${FREE_PARTICLE.height}`} role="img" aria-label="A normalized Gaussian quantum wavepacket travels right and spreads. Its real part is dark navy, its imaginary part is lighter navy, and its probability density is a shaded green curve.">
+      <path class="axis" d={`M16 ${FREE_PARTICLE.baseline}H704`} />
+      <path class="ticks" d={ticks} />
+      <g data-wave>
+        <path class="density-fill" data-fill d={frame.fill} />
+        <path class="imaginary" data-imaginary d={frame.imaginary} />
+        <path class="real" data-real d={frame.real} />
+        <path class="density" data-density d={frame.density} />
+      </g>
+      {['real', 'imaginary', 'density'].map((color, index) => (
+        <foreignObject class={color} x={490 + index * 68} y="12" width="62" height="24">
+          <div class="legend" xmlns="http://www.w3.org/1999/xhtml" set:html={labels[index]} />
+        </foreignObject>
+      ))}
+    </svg>
+  </figure>
+</free-particle-wavepacket>
+
+<style>
+  free-particle-wavepacket {
+    --wave-real: #243b5a;
+    --wave-imaginary: #8a9eb9;
+    --wave-density: #15803d;
+    display: block;
+    max-width: 680px;
+    margin: 1rem auto;
+  }
+  :global(html[data-theme='dark']) free-particle-wavepacket {
+    --wave-real: #b7cdf2;
+    --wave-imaginary: #6f91bc;
+    --wave-density: #4ade80;
+  }
+  figure { margin: 0; }
+  svg { display: block; width: 100%; height: auto; }
+  path { fill: none; stroke-linecap: round; stroke-linejoin: round; }
+  .axis { stroke: var(--foreground); stroke-opacity: 0.22; stroke-width: 0.7; }
+  .ticks { stroke: var(--foreground); stroke-opacity: 0.12; stroke-width: 0.7; }
+  .real { color: var(--wave-real); }
+  .imaginary { color: var(--wave-imaginary); }
+  .density { color: var(--wave-density); }
+  path.real { stroke: var(--wave-real); stroke-width: 1.7; }
+  path.imaginary { stroke: var(--wave-imaginary); stroke-width: 1.4; }
+  path.density { stroke: var(--wave-density); stroke-width: 1.6; }
+  .density-fill { fill: var(--wave-density); fill-opacity: 0.1; }
+  .legend { display: grid; place-items: center; height: 100%; font-size: 12px; line-height: 1; }
+</style>
+
+<script>
+  import { FREE_PARTICLE, wavepacketFrame } from './free-particle-model.mjs';
+
+  class FreeParticleWavepacket extends HTMLElement {
+    private controller?: AbortController;
+    private observer?: IntersectionObserver;
+    private frame = 0;
+
+    connectedCallback() {
+      if (this.controller) return;
+      this.controller = new AbortController();
+      const { signal } = this.controller;
+      const motion = window.matchMedia?.('(prefers-reduced-motion: reduce)');
+      let visible = !('IntersectionObserver' in window);
+      let clock = 0;
+      let lastStamp: number | null = null;
+      const play = 9, hold = 0.8, fade = 0.35;
+      const cycle = play + hold + 2 * fade;
+      const group = this.querySelector<SVGGElement>('[data-wave]')!;
+      const paths = ['real', 'imaginary', 'density', 'fill'].map((key) => ({
+        key: key as 'real' | 'imaginary' | 'density' | 'fill',
+        path: this.querySelector<SVGPathElement>(`[data-${key}]`)!,
+      }));
+      const render = () => {
+        const resetting = clock > play + hold + fade;
+        const time = motion?.matches ? FREE_PARTICLE.duration / 2
+          : resetting ? 0 : Math.min(clock / play, 1) * FREE_PARTICLE.duration;
+        const opacity = motion?.matches || clock <= play + hold ? 1
+          : resetting ? (clock - play - hold - fade) / fade
+          : 1 - (clock - play - hold) / fade;
+        const sample = wavepacketFrame(time);
+        paths.forEach(({ key, path }) => path.setAttribute('d', sample[key]));
+        group.setAttribute('opacity', String(Math.max(0, Math.min(1, opacity))));
+        this.dataset.time = time.toFixed(4);
+      };
+      const stop = () => { cancelAnimationFrame(this.frame); this.frame = 0; lastStamp = null; };
+      const tick = (stamp: number) => {
+        this.frame = 0;
+        if (motion?.matches || !visible || document.hidden) { lastStamp = null; return; }
+        if (lastStamp !== null) clock = (clock + Math.min((stamp - lastStamp) / 1000, 0.1)) % cycle;
+        lastStamp = stamp;
+        render();
+        this.frame = requestAnimationFrame(tick);
+      };
+      const sync = () => {
+        stop(); render();
+        if (!motion?.matches && visible && !document.hidden) this.frame = requestAnimationFrame(tick);
+      };
+      document.addEventListener('visibilitychange', sync, { signal });
+      motion?.addEventListener('change', sync, { signal });
+      if ('IntersectionObserver' in window) {
+        this.observer = new IntersectionObserver(([entry]) => { visible = entry.isIntersecting; sync(); }, { threshold: 0.05 });
+        this.observer.observe(this);
+      }
+      sync();
+    }
+
+    disconnectedCallback() {
+      this.controller?.abort(); this.controller = undefined;
+      this.observer?.disconnect(); this.observer = undefined;
+      cancelAnimationFrame(this.frame); this.frame = 0;
+    }
+  }
+  if (!customElements.get('free-particle-wavepacket')) customElements.define('free-particle-wavepacket', FreeParticleWavepacket);
+</script>

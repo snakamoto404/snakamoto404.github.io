@@ -8,12 +8,6 @@ const toIsoDate = (value: Date) => value.toISOString().slice(0, 10);
 
 const sortedEntries = [...entries].sort((a, b) => b.data.date.getTime() - a.data.date.getTime());
 
-const toTopicLabel = (value: string) =>
-  value
-    .split('-')
-    .map((part) => part.charAt(0).toUpperCase() + part.slice(1))
-    .join(' ');
-
 const groupedByTopic = sortedEntries.reduce<Map<string, typeof sortedEntries>>((acc, entry) => {
   const topic = entry.slug.split('/')[0] ?? 'general';
   const existing = acc.get(topic) ?? [];
@@ -28,15 +22,14 @@ const topicGroups = [...groupedByTopic.entries()].sort(([a], [b]) => a.localeCom
 <BaseLayout title="Blogs | Snakamoto" description="Topic-grouped blog posts on machine learning and related research.">
   <section class="space-y-6">
     <div class="space-y-2">
-      <h1 class="text-3xl font-semibold tracking-tight">Machine Learning blogs</h1>
+      <h1 class="text-3xl font-semibold tracking-tight">Machine learning blogs</h1>
     </div>
 
     {
       topicGroups.length ? (
         <div class="space-y-6">
-          {topicGroups.map(([topic, topicEntries]) => (
+          {topicGroups.map(([, topicEntries]) => (
             <section class="space-y-3">
-              <h2 class="text-xl font-semibold tracking-tight">{toTopicLabel(topic)}</h2>
               <ul class="space-y-3">
                 {topicEntries.map((entry) => (
                   <li class="panel">

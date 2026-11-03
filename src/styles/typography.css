@@ -113,6 +113,28 @@
     }
   }
 
+  .app-prose .theme-figure {
+    max-width: 540px;
+    margin: 1rem auto;
+  }
+
+  .app-prose .theme-figure img {
+    display: block;
+    width: 100%;
+    height: auto;
+    margin: 0;
+    border: 0;
+  }
+
+  .app-prose .theme-figure .figure-dark,
+  html[data-theme="dark"] .app-prose .theme-figure .figure-light {
+    display: none;
+  }
+
+  html[data-theme="dark"] .app-prose .theme-figure .figure-dark {
+    display: block;
+  }
+
   .astro-code {
     @apply flex max-w-full overflow-x-auto border border-border;
     -webkit-overflow-scrolling: touch;

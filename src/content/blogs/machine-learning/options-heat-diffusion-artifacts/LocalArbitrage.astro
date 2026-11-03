@@ -1,19 +1,19 @@
 ---
 import { renderMathLabels } from './figure-math.mjs';
 const nodes = [
-  { x: 32, y: 72, width: 128, future: false, price: 'p', value: 'V_{p,t}' },
-  { x: 346, y: 12, width: 182, future: true, price: 'p+dp', value: 'V_{p+dp,t+dt}' },
-  { x: 346, y: 142, width: 182, future: true, price: 'p-dp', value: 'V_{p-dp,t+dt}' },
+  { x: 8, y: 66, width: 96, price: 'p', value: 'V_{p,t}' },
+  { x: 204, y: 8, width: 144, price: 'p+dp', value: 'V_{p+dp,t+dt}' },
+  { x: 204, y: 124, width: 144, price: 'p-dp', value: 'V_{p-dp,t+dt}' },
 ];
 const prices = renderMathLabels(nodes.map(({ price }) => price));
 const values = renderMathLabels(nodes.map(({ value }) => value));
 ---
 
 <figure class="local-arbitrage">
-  <svg viewBox="0 0 560 220" role="img" aria-label="A local binomial step: a stock priced p with derivative value V at p and t branches to p plus dp or p minus dp. Their derivative values are V at p plus dp and t plus dt, and V at p minus dp and t plus dt.">
-    <path class="branches" d="M170 88L334 28M326 28L334 28L329 35M170 88L334 158M330 150L334 158L326 157" />
-    {nodes.map(({ x, y, width, future }, index) => (
-      <g class:list={['node', { future }]} transform={`translate(${x} ${y})`}>
+  <svg viewBox="0 0 356 198" role="img" aria-label="A local binomial step: a stock priced p with derivative value V at p and t branches to p plus dp or p minus dp. Their derivative values are V at p plus dp and t plus dt, and V at p minus dp and t plus dt.">
+    <path class="branches" d="M114 82L192 24M184 25L192 24L189 32M114 82L192 140M189 132L192 140L184 139" />
+    {nodes.map(({ x, y, width }, index) => (
+      <g class="node" transform={`translate(${x} ${y})`}>
         <g class="stock">
           <rect width={width} height="32" />
           <foreignObject width={width} height="32"><div class="math-label" xmlns="http://www.w3.org/1999/xhtml" set:html={prices[index]} /></foreignObject>
@@ -28,7 +28,7 @@ const values = renderMathLabels(nodes.map(({ value }) => value));
 </figure>
 
 <style>
-  .local-arbitrage { --local-blue: #1d6fd1; --local-green: #15803d; max-width: 500px; margin: 0.75rem auto; }
+  .local-arbitrage { --local-blue: #1d6fd1; --local-green: #15803d; max-width: 356px; margin: 0.75rem auto; }
   :global(html[data-theme='dark']) .local-arbitrage { --local-blue: #60a5fa; --local-green: #4ade80; }
   svg { display: block; width: 100%; height: auto; }
   .branches { fill: none; stroke: var(--foreground); stroke-opacity: 0.5; stroke-linecap: round; stroke-linejoin: round; }
@@ -37,19 +37,4 @@ const values = renderMathLabels(nodes.map(({ value }) => value));
   rect { fill: currentColor; fill-opacity: 0.08; stroke: currentColor; stroke-opacity: 0.35; }
   .math-label { display: grid; place-items: center; height: 100%; font-size: 18px; line-height: 1; }
   .value .math-label { font-size: 17px; }
-  .branches, .future .stock { animation: local-stock 5.5s ease infinite; }
-  .future .value { animation: local-value 5.5s ease infinite; }
-  @keyframes local-stock {
-    0%, 13% { opacity: 0; }
-    25%, 88% { opacity: 1; }
-    100% { opacity: 0; }
-  }
-  @keyframes local-value {
-    0%, 34% { opacity: 0; }
-    48%, 88% { opacity: 1; }
-    100% { opacity: 0; }
-  }
-  @media (prefers-reduced-motion: reduce) {
-    .branches, .future .stock, .future .value { animation: none; }
-  }
 </style>

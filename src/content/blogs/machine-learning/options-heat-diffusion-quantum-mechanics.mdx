@@ -14,6 +14,8 @@ import BrownianComparison from './options-heat-diffusion-artifacts/BrownianCompa
 import CallConvolution from './options-heat-diffusion-artifacts/CallConvolution.astro';
 import HeatCurvature from './options-heat-diffusion-artifacts/HeatCurvature.astro';
 import LocalArbitrage from './options-heat-diffusion-artifacts/LocalArbitrage.astro';
+import FreeParticleWavepacket from './options-heat-diffusion-artifacts/FreeParticleWavepacket.astro';
+import VisualRecap from './options-heat-diffusion-artifacts/VisualRecap.astro';
 
 Risk-neutral pricing, diffusion, and quantum mechanics are deep but disjoint topics.
 
@@ -38,6 +40,24 @@ In the <span class="text-green-700 dark:text-green-400">green trajectory</span>,
 The evolving curve of options v. stock-price at time $t$ evolves according to the heat equation in reverse-time, where the options-price axis is replaced with "temperature" and the stock-price axis is replaced with position along a heated rod.
 
 </details>
+
+## Contents
+
+<VisualRecap />
+
+- [Discrete options pricing](#discrete-options-pricing)
+  - [Pricing a call on a stump](#pricing-a-call-on-a-stump)
+  - [Forshadowing the risk-neutral measure](#forshadowing-the-risk-neutral-measure)
+  - [From stumps to binomial trees](#from-stumps-to-binomial-trees)
+- [To the continuum](#to-the-continuum)
+  - [Proper limit of binomial trees: Brownian process.](#proper-limit-of-binomial-trees-brownian-process)
+  - [Global measure perspective on options pricing](#global-measure-perspective-on-options-pricing)
+  - [Quick detour on the heat equation](#quick-detour-on-the-heat-equation)
+  - [Local arbitrage perspective and the heart of Black-Scholes](#local-arbitrage-perspective-and-the-heart-of-black-scholes)
+  - [Feynman-Kac intuitions](#feynman-kac-intuitions)
+- [Extensions](#extensions)
+  - [Bells and whistles, and the full Black-Scholes](#bells-and-whistles-and-the-full-black-scholes)
+  - [Free-particle quantum mechanics](#free-particle-quantum-mechanics)
 
 ## Discrete options pricing
 
@@ -255,7 +275,7 @@ $$
 
 ### Local arbitrage perspective and the heart of Black-Scholes
 
-This is the crux of the continuous-limit options pricing narrative.
+<span class="maroon">This section is the crux of the continuous-limit options pricing narrative.</span>
 We take the continuous limit of the "backward induction" pricing perspective and demonstrate equivalence with reverse-time heat diffusion. Begin by defining some quantities:
 - **Initial condition** denote the terminal derivative payout given terminal stock price $p$ by $V_T(p)$
 - Let $V_{p, t}$ denote the derivative's fair price at time $t$ given current price $p$.
@@ -278,7 +298,60 @@ $$
   S = \pd p V
 $$
 :::
-This explain, as a collary, **the options delta $\pd p V$ is the amount of stock in the arbitrage portfolio**.
+One important corollary is that **the option delta $\pd p V$ is the amount of stock in the arbitrage portfolio**. Next, we need an equation involving the time derivative $\pd t V$.
+
+We begin by treating **the replicating portfolio's price $v$, equal to the fair price, as a random variable $V$** and Taylor-expanding its increments:
+
+1. $V$ depends on both time $t$ and the underlying price $P$ (also a random variable!).
+2. **Recall from the continuous-limit section that $(dP)^2 = dt = 1/n$!** We therefore need to retain the second-order term.
+
+Expanding the random variable (more formally, applying Itô's formula) yields
+$$
+\begin{aligned}
+  dV_{P, t}
+  &= (\pd p V)\, dP + (\pd t V)\, dt + \df 1 2 (\pd p^2 V)\, \cancelto{dt}{(dP)^2} \\
+  &= \left(\pd t V + \df 1 2 \pd p^2 V\right)\, dt + S\, dP
+\end{aligned}
+$$
+But we know that the stock is the only underlying source of variation, so $dV = S\, dP$, then **the $dt$ drift term must be zero**.
+This yields the derivative pricing equation
+
+:::proposition[derivative pricing equation]
+Let $V_{p, t}$ be the arbitrage-enforced fair price of a derivative with final payout $V_T(x_T)$, over an underlying undergoing additive Brownian motion, then $V_{p, t}$ is specified by the boundary condition $V_T$ and the time evolution equation
+$$
+  \pd t = - \df 1 2 \nabla^2 V := -\df 1 2 \pd p^2 V
+$$
+:::
+
+:::corollary[derivative pricing evolve according to reverse-time heat diffusion]
+Compare to the heat equation $\pd t u = \tfrac 1 2 \nabla^2 u$, the only difference is reversing time $t\mapsto -t$!
+:::
+
+### Feynman-Kac intuitions
+
+The two equivalent perspectives on risk-neutral derivative pricing specializes a general construction.
+
+:::theorem[Feynman-Kac (informal)]
+Given a pair of path measure $\mathbb Q$ and **its generator** $\mathcal L$, and terminal condition $V(x, T) = Z(x)$, the local SDE constraint (left) and global expectation equation (right) imply each other:
+$$
+  (\pd t + \mathcal L) V = 0 \iff V(x, t) = \mathbb E_{x_T\sim \mathbb Q\mid x, t} Z(x_T)
+$$
+:::
+
+On the high-level, there is a pairing between a <strong class="text-blue-700 dark:text-blue-400">local generator</strong> and <strong class="text-green-700 dark:text-green-400">global path measure</strong>.
+
+Substituting our Brownian-motion special case:
+
+{/* [highlight the blue df 1 2 \pd x^2 and green x_T \sim N(x, t) terms] */}
+$$
+  \left(\pd t + \class{text-blue-700 dark:text-blue-400}{\df 1 2 \pd x^2}\right) V = 0 \leftrightarrow V(x, t) = \mathbb E_{\class{text-green-700 dark:text-green-400}{x_T \sim \mathcal N(x, t)}} Z(x_T)
+$$
+
+Brownian motion is the infinitesimal generator of the Gaussian kernel.
+- **Path-integral view**: $V(\mathrm{here}, \mathrm{now}) =$ integral over all payout, or terminal price, weighted by $\mathbb Q(\text{path to payout})$.
+- **Local SDE view**: start from initial conditions, or terminal payout, and integrate infinitesimal constraints on risk-neutrality.
+
+In a sense, all we did was move the integral from the observable (fair value) into the measure itself. In this sense, **Feynman-Kac feels like an adjoint statement**.
 
 ## Extensions
 
@@ -307,3 +380,56 @@ $$
 Now, there's a clear view of the Nobel-prize winning equation with clear attribution from where each term comes from.
 
 ### Free-particle quantum mechanics
+
+Consider the simplest system: a free particle, without external force, traveling in 1d space.
+
+The quantum-mechanical axioms describe the particle's observables with a complex wavefunction $\psi(x, t)$ whose amplitude $|\psi(x, t)|^2$ is the probability density of observing the particle at location $x$, time $t$.
+
+A particle traveling to the right looks like this:
+<FreeParticleWavepacket />
+
+{/*
+[a single line with very faint tickers; showing a Gaussian wave envelope showing the real part in dark navy, the imaginary plot in lighter navy, and the pdf contour in green with shade under the pdf function]
+*/}
+
+Given initial conditions $\psi(x, 0)$, it remains to describe how the wave function evolves in time.
+
+:::proposition[free-particle Schrodinger equation intuitions]
+Schrodinger posited that, like classical (Hamiltonian) mechanics, **energy is the "generator" of time translations**.
+:::
+
+For a free particle with unit mass, its energy is $E = \tfrac 1 2 v^2 = \tfrac{p^2}{2}$. Quantum mechanics promotes observables into operators, momentum $p\mapsto \hat p$, energy $E \mapsto \hat H$, and the "energy is the generator of time translations" statement mathematcally look like
+$$
+  \pd t \psi = - i \hat H \psi, \quad \hat H = \dfrac{\hat p^2}{2}
+$$
+We actually know the momentum operator, because **momentum is the "generator" of spatial translations**
+$$
+  \pd x \psi = i \hat p \, \psi \implies \hat p = - i \pd x = -i\nabla
+$$
+Putting things together, the Schrodinger equation for free particle is
+$$
+  \pd t \psi = -i \hat H \psi = \dfrac i 2 \nabla^2 \psi
+$$
+Oh, but compare to the heat diffusion equation!
+$$
+\pd t u = \tfrac 1 2 \nabla^2 u
+$$
+They're the same formula under $t\mapsto it$. Mark Kac (pronounced Kha-tz) recognized this connection in 1949.
+
+:::proposition[wick rotation]
+Quantum-mechanical free particle undergoes diffusion in imaginary time.
+:::
+
+So what's the "global measure" quantum-mechanical view? Richard Feynman posited in 1948 the interpretation that (approximately) **particles travel through all possible paths, with amplitude weighted by the physical action**; here the physical action is related to energy. Formally,
+
+$$
+  \psi(x, t) = \int e^{i S[q]}\, \mathcal Dq \cdot \psi_0(x_0)\, dx_0
+$$
+The action part of the path integral for free particle formally works out to an imaginary double-exponential
+$$
+  \psi(x, t) = \int \dfrac{e^{i(x-x_0)^2}/2t}{\sqrt{2\pi i t}} \psi_0(x_0) =^? \mathbb E_{x_0 \sim \tilde {\mathbb Q}\mid x} \psi_0
+$$
+Compare with the options pricing equation (reverse-time heat kernel), **again, they only differ by an imaginary time rotation**! This completes the commutative diagram.
+$$
+  V(x, t) = \mathbb E_{x_t \sim \mathcal N(x, t)} V_T(x_T) = \int \dfrac{e^{(x_T - x)^2/2\tau}}{\sqrt{2\pi \tau}} V_T(x_T)\, dx_T
+$$
