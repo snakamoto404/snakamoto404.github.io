@@ -98,10 +98,3 @@ Set these public env vars (for local `.env` or GitHub repo variables):
 1. Push to the `main` branch.
 2. In GitHub repository settings, set **Pages** source to **GitHub Actions**.
 3. The workflow in `.github/workflows/deploy.yml` builds and deploys `dist/`.
-
-## CV download
-
-- Share the CV page: https://snakamoto404.github.io/cv/
-- Direct PDF link: https://snakamoto404.github.io/cv.pdf
-- Replace `public/cv.pdf` with the latest compiled CV to update both URLs.
-  Keep the filename unchanged so shared links continue to work.
