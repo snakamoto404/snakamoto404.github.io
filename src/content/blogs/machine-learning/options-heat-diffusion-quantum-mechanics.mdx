@@ -19,11 +19,11 @@ import VisualRecap from './options-heat-diffusion-artifacts/VisualRecap.astro';
 
 Risk-neutral pricing, diffusion, and quantum mechanics are deep but disjoint topics.
 
-Each topic had highly nontrivial things to say, and I was vaguely aware of them being somehow connected with each other. The original motivation for the Jane Street intern class, and this post, was to clearly understand the interplays. Tl; dr of interesting claims:
+Each topic had highly nontrivial things to say, and I was vaguely aware of them being somehow connected with each other. The motivation for this writeup is to clearly understand the interplays. Tl; dr of interesting claims:
 1. The <span class="maroon">**risk-neutral measure $\mathbb Q(s)$ is fundamentally "how much is a future dollar in scenario $s$ worth today"?**</span>
 2. By induction on a single-step binary stump, we can price options along a discrete binary tree via **risk-neutral arbitrage**.
 3. The heat diffusion equation is ~energy mass smearing along microscopic Brownian motion.
-4. Taking the continuum (Brownian) limit of trees, we clarify how <span class="maroon">**options price evolve as "heat-diffusion" in reverse-time**</span>.
+4. Taking the continuum (Brownian) limit of trees, we investigate how exactly <span class="maroon">**options price evolve as "heat-diffusion" in reverse-time**</span>.
 4. The equivalence between options pricing via two "local" and "global" approaches is a special case of **Feynman-Kac**, which describes a <span class="maroon">pairing between *local stochastic differential equation* and *global expectation along a measure*</span>.
 5. This local-generator v. global-measure duality also shows up as **Schrodinger equation $\leftrightarrow$ Feynman path integral** in free-particle quantum mechanics via an imaginary time-rotation.
 <BachelierQuadrants />
@@ -61,7 +61,7 @@ The evolving curve of options v. stock-price at time $t$ evolves according to th
 
 ## Discrete options pricing
 
-We begin with the core intuition of **pricing via arbitrage**.
+We begin with the core intuition of **derivative pricing via replication and arbitrage**.
 
 ### Pricing a call on a stump
 
